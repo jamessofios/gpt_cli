@@ -19,11 +19,12 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
 	size_t realsize = size * nmemb;
 	struct response *mem = (struct response*)userp;
-	char *ptr = realloc(mem->memory, mem->size + realsize + 1);
-	mem->memory = ptr;
-	memcpy(&(mem->memory[mem->size]), contents, realsize);
-	mem->size += realsize;
-	mem->memory[mem->size] = 0;
+
+	mem->memory = calloc(1, realsize);
+	memcpy(mem->memory, contents, realsize);
+
+	mem->size = realsize;
+
 	return realsize;
 }
 
@@ -34,25 +35,28 @@ int main(int argc, char **argv)
 		fprintf(stderr, "%s\n", "Error: No API key found.");
 		exit(1);
 	}
+
 	char *input = "{\"model\":\"gpt-3.5-turbo\",\"messages\":[{\"role\":\"system\",\"content\":\"Hello\"},{\"role\":\"user\",\"content\":\"Hello\"}],\"temperature\":1}";
 
-	curl_global_init(CURL_GLOBAL_DEFAULT);
 	struct response chunk = { .memory = NULL, .size = 0 };
 
 	json_object *root = json_tokener_parse(input);
+
+	// initialize curl
+	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURLcode ret = 0;
 	CURL *hnd = NULL;
 	struct curl_slist *slist1 = NULL;
-
 	slist1 = NULL;
 	slist1 = curl_slist_append(slist1, "Content-Type: application/json");
 
-//	get api key
+	// get api key
 	char *bear = "Authorization: Bearer ";
 	char *auth = calloc(1, strlen(bear) + strlen(api_key) + 1);
 	strncpy(auth, bear, strlen(bear));
 	strncat(auth, api_key, strlen(api_key));
-
+////////////////////////////////////////////////////////////////////////////////////////////////
+	// give the api key to curl and set easy options
 	slist1 = curl_slist_append(slist1, auth);
 	free(auth);
 	auth = NULL;
@@ -72,10 +76,11 @@ int main(int argc, char **argv)
 	curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST");
 	curl_easy_setopt(hnd, CURLOPT_FTP_SKIP_PASV_IP, 1L);
 	curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 	ret = curl_easy_perform(hnd);
 
 	if (ret != CURLE_OK) {
+		fprintf(stderr, "%s\n", "Error: curl status was not ok");
 		goto cleanup;
 	}
 
@@ -86,7 +91,8 @@ int main(int argc, char **argv)
 
 	printf("%s\n", json_object_to_json_string(result));
 
-cleanup:
+	cleanup:
+
 	free(s);
 	s = NULL;
 
