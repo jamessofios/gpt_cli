@@ -3,11 +3,15 @@
 // https://ai.stackexchange.com/questions/39837/meaning-of-roles-in-the-api-of-gpt-4-chatgpt-system-user-assistant
 // https://stackoverflow.com/questions/3840582/still-reachable-leak-detected-by-valgrind
 
+//chat json data is saved in $HOME/.chatgpt.json
+
 #include <curl/curl.h>
 #include <json-c/json.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
+#include "construct_json.h"
 
 struct response {
 	char *memory;
@@ -20,7 +24,7 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp)
 	size_t realsize = size * nmemb;
 	struct response *mem = (struct response*)userp;
 
-	mem->memory = calloc(1, realsize);
+	mem->memory = calloc(nmemb, size);
 	memcpy(mem->memory, contents, realsize);
 
 	mem->size = realsize;
@@ -31,23 +35,40 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp)
 int main(int argc, char **argv)
 {
 	char *api_key = getenv("OPENAI_API_KEY");
-	if (api_key == NULL) {
-		fprintf(stderr, "%s\n", "Error: No API key found.");
+	char *save_file = calloc(1, strlen(getenv("HOME")) + strlen("/.chatgpt.json") + 1);
+	CURL *hnd = NULL;
+	struct curl_slist *slist1 = NULL;
+
+	if (save_file == NULL) {
+		fprintf(stderr, "%s\n", "Could not allocate space for filename.");
 		exit(1);
 	}
 
-	char *input = "{\"model\":\"gpt-3.5-turbo\",\"messages\":[{\"role\":\"system\",\"content\":\"Hello\"},{\"role\":\"user\",\"content\":\"Hello\"}],\"temperature\":1}";
+	strncpy(save_file, getenv("HOME"), strlen(getenv("HOME")));
+	strncat(save_file, "/.chatgpt.json", strlen("/.chatgpt.json" + 1));
+
+	json_object *root = json_object_from_file(save_file);
+
+	if (api_key == NULL) {
+		fprintf(stderr, "%s\n", "Error: No API key found. Please set the environment variable OPENAI_API_KEY.");
+		exit(1);
+	}
+
+	if (root == NULL) {
+		root = new_chatgpt();
+	}
+
+	if (argc == 2) {
+		add_text_prompt(root, "user", argv[1]);
+	} else {
+		exit(1);
+	}
 
 	struct response chunk = { .memory = NULL, .size = 0 };
-
-	json_object *root = json_tokener_parse(input);
 
 	// initialize curl
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURLcode ret = 0;
-	CURL *hnd = NULL;
-	struct curl_slist *slist1 = NULL;
-	slist1 = NULL;
 	slist1 = curl_slist_append(slist1, "Content-Type: application/json");
 
 	// get api key
@@ -87,9 +108,13 @@ int main(int argc, char **argv)
 	char *s = calloc(1, chunk.size + 1);
 	strncpy(s, chunk.memory, chunk.size);
 
+	puts(s);
+	exit(5);
+
 	json_object *result = json_tokener_parse(s);
 
-	printf("%s\n", json_object_to_json_string(result));
+//	printf("%s\n", json_object_to_json_string(result));
+	printf("%s\n",json_object_to_json_string_ext(result, JSON_C_TO_STRING_PRETTY));
 
 	cleanup:
 
@@ -113,6 +138,9 @@ int main(int argc, char **argv)
 
 	json_object_put(result);
 	result = NULL;
+
+	free(save_file);
+	save_file = NULL;
 
 	return (int)ret;
 }
