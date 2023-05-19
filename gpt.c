@@ -35,7 +35,7 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp)
 int main(int argc, char **argv)
 {
 	char *api_key = getenv("OPENAI_API_KEY");
-	char *save_file = calloc(1, strlen(getenv("HOME")) + strlen("/.chatgpt.json") + 1);
+	char *save_file = calloc(strlen(getenv("HOME")) + strlen("/.chatgpt.json") + 1, 1);
 	CURL *hnd = NULL;
 	struct curl_slist *slist1 = NULL;
 
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 	}
 
 	strncpy(save_file, getenv("HOME"), strlen(getenv("HOME")));
-	strncat(save_file, "/.chatgpt.json", strlen("/.chatgpt.json" + 1));
+	strcat(save_file, "/.chatgpt.json");
 
 	json_object *root = json_object_from_file(save_file);
 
@@ -60,7 +60,11 @@ int main(int argc, char **argv)
 
 	if (argc == 2) {
 		add_text_prompt(root, "user", argv[1]);
+	} else if (argc == 3) {
+		add_text_prompt(root, "user", argv[1]);
+		set_model(root, argv[2]);
 	} else {
+		fprintf(stderr, "%s\n", "Error: please provide an argument");
 		exit(1);
 	}
 
@@ -73,9 +77,10 @@ int main(int argc, char **argv)
 
 	// get api key
 	char *bear = "Authorization: Bearer ";
-	char *auth = calloc(1, strlen(bear) + strlen(api_key) + 1);
+	char *auth = calloc(strlen(bear) + strlen(api_key) + 1, 1);
 	strncpy(auth, bear, strlen(bear));
-	strncat(auth, api_key, strlen(api_key));
+	strcat(auth, api_key);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 	// give the api key to curl and set easy options
 	slist1 = curl_slist_append(slist1, auth);
@@ -100,16 +105,13 @@ int main(int argc, char **argv)
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 	ret = curl_easy_perform(hnd);
 
-	if (ret != CURLE_OK) {
+	if (ret != CURLE_OK || chunk.size <= 0 || chunk.memory == NULL) {
 		fprintf(stderr, "%s\n", "Error: curl status was not ok");
 		goto cleanup;
 	}
 
-	char *s = calloc(1, chunk.size + 1);
-	strncpy(s, chunk.memory, chunk.size);
-
-	puts(s);
-	exit(5);
+	char *s = calloc(chunk.size + 1, 1);
+	memcpy(s, chunk.memory, chunk.size);
 
 	json_object *result = json_tokener_parse(s);
 
