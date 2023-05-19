@@ -13,22 +13,26 @@
 
 #include "construct_json.h"
 
-struct response {
-	char *memory;
+struct memory {
+	char *response;
 	size_t size;
 };
 
 /* https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html */
-size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp)
+size_t write_callback(void *data, size_t size, size_t nmemb, void *userp)
 {
+
 	size_t realsize = size * nmemb;
-	struct response *mem = (struct response*)userp;
+	struct memory *mem = (struct memory *)userp;
+	char *ptr = realloc(mem->response, mem->size + realsize + 1);
 
-	mem->memory = calloc(nmemb, size);
-	memcpy(mem->memory, contents, realsize);
+	if(ptr == NULL)
+		return 0;  /* out of memory! */
 
-	mem->size = realsize;
-
+	mem->response = ptr;
+	memcpy(&(mem->response[mem->size]), data, realsize);
+	mem->size += realsize;
+	mem->response[mem->size] = 0;
 	return realsize;
 }
 
@@ -68,10 +72,10 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	struct response chunk = { .memory = NULL, .size = 0 };
+	struct memory chunk = { .response = NULL, .size = 0 };
 
 	// initialize curl
-	curl_global_init(CURL_GLOBAL_DEFAULT);
+//	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURLcode ret = 0;
 	slist1 = curl_slist_append(slist1, "Content-Type: application/json");
 
@@ -89,7 +93,7 @@ int main(int argc, char **argv)
 
 	hnd = curl_easy_init();
 	curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, write_callback);
-	curl_easy_setopt(hnd, CURLOPT_WRITEDATA, (void*)&chunk);
+	curl_easy_setopt(hnd, CURLOPT_WRITEDATA, (void *)&chunk);
 	curl_easy_setopt(hnd, CURLOPT_BUFFERSIZE, 102400L);
 	curl_easy_setopt(hnd, CURLOPT_URL, "https://api.openai.com/v1/chat/completions");
 	curl_easy_setopt(hnd, CURLOPT_NOPROGRESS, 1L);
@@ -105,14 +109,15 @@ int main(int argc, char **argv)
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 	ret = curl_easy_perform(hnd);
 
-	if (ret != CURLE_OK || chunk.size <= 0 || chunk.memory == NULL) {
+	if (ret != CURLE_OK) {// || chunk.size <= 0 || chunk.memory == NULL) {
 		fprintf(stderr, "%s\n", "Error: curl status was not ok");
 		goto cleanup;
 	}
 
 	char *s = calloc(chunk.size + 1, 1);
-	memcpy(s, chunk.memory, chunk.size);
+	memcpy(s, chunk.response, chunk.size - 1);
 
+//	puts(s);
 	json_object *result = json_tokener_parse(s);
 
 //	printf("%s\n", json_object_to_json_string(result));
@@ -123,8 +128,8 @@ int main(int argc, char **argv)
 	free(s);
 	s = NULL;
 
-	free(chunk.memory);
-	chunk.memory = NULL;
+	free(chunk.response);
+	chunk.response = NULL;
 	chunk.size = 0;
 
 	curl_easy_cleanup(hnd);
@@ -133,7 +138,7 @@ int main(int argc, char **argv)
 	curl_slist_free_all(slist1);
 	slist1 = NULL;
 
-	curl_global_cleanup();
+//	curl_global_cleanup();
 
 	json_object_put(root);
 	root = NULL;
