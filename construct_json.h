@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <json-c/json.h>
 
-
 // load file: json_object *root = json_object_from_file("tmp.json");
 // save file: json_object_to_file("tmp2.json", root);
 
@@ -26,18 +25,17 @@ void add_text_prompt(json_object *input, char *role, char* prompt_text)
 	json_object_array_add(message_array, prompt_json);
 }
 
-//void add_json_prompt(json_object *chat, json_object *prompt)
-//{
-//	json_object *message_array = json_object_object_get(chat, "messages");
-//
-//	if (message_array == NULL) {
-//		message_array = json_object_new_array();
-//		json_object_object_add(input, "mess", json_object_new_string(role));
-//	}
-//
-//	json_object_array_add(message_array, prompt);
-//
-//}
+void add_json_prompt(json_object *dest, json_object *src)
+{
+	json_object *message_array = json_object_object_get(dest, "messages");
+
+	if (message_array == NULL) {
+		message_array = json_object_new_array();
+//		json_object_object_add(input, "role", json_object_new_string(role));
+	}
+
+	json_object_array_add(message_array, src);
+}
 
 void set_temp(json_object *input, int temp)
 {

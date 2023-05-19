@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 	struct memory chunk = { .response = NULL, .size = 0 };
 
 	// initialize curl
-//	curl_global_init(CURL_GLOBAL_DEFAULT);
+	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURLcode ret = 0;
 	slist1 = curl_slist_append(slist1, "Content-Type: application/json");
 
@@ -117,11 +117,20 @@ int main(int argc, char **argv)
 	char *s = calloc(chunk.size + 1, 1);
 	memcpy(s, chunk.response, chunk.size - 1);
 
-//	puts(s);
 	json_object *result = json_tokener_parse(s);
 
-//	printf("%s\n", json_object_to_json_string(result));
-	printf("%s\n",json_object_to_json_string_ext(result, JSON_C_TO_STRING_PRETTY));
+//	printf("%s\n",json_object_to_json_string_ext(result, JSON_C_TO_STRING_PRETTY));
+
+	json_object * assist_message =
+	json_object_object_get(json_object_array_get_idx(json_object_object_get(result, "choices"), 0), "message");
+
+	add_json_prompt(root, assist_message);
+
+	json_object_to_file(save_file, root);
+
+	puts(json_object_get_string(json_object_object_get(assist_message, "content")));
+
+//	printf("%s\n",json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY));
 
 	cleanup:
 
@@ -138,7 +147,7 @@ int main(int argc, char **argv)
 	curl_slist_free_all(slist1);
 	slist1 = NULL;
 
-//	curl_global_cleanup();
+	curl_global_cleanup();
 
 	json_object_put(root);
 	root = NULL;
