@@ -134,6 +134,8 @@ int main(int argc, char **argv)
 
 	cleanup:
 
+//	free_chatgpt();
+
 	free(s);
 	s = NULL;
 
