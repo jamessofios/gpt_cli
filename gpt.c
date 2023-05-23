@@ -66,8 +66,9 @@ int main(int argc, char **argv)
 	}
 
 	if (argc == 1) {
-		fprintf(stderr, "%s\n", "Error: please provide an argument");
-		exit(1);
+		fprintf(stderr, "%s\n\n", "Error: please provide an argument");
+		fprintf(stderr, "Information:\nUsing API key: %s\nSaving chat history in: %s\n", api_key, save_file);
+		goto cleanup;
 	}
 
 
@@ -149,14 +150,17 @@ int main(int argc, char **argv)
 
 	puts(json_object_get_string(json_object_object_get(assist_message, "content")));
 
-	cleanup:
-
 	free(result_string);
 	result_string = NULL;
+
+	json_object_put(result_json);
+	result_json = NULL;
 
 	free(chunk.response);
 	chunk.response = NULL;
 	chunk.size = 0;
+
+	cleanup:
 
 	curl_easy_cleanup(hnd);
 	hnd = NULL;
@@ -167,13 +171,10 @@ int main(int argc, char **argv)
 	json_object_put(root);
 	root = NULL;
 
-	json_object_put(result_json);
-	result_json = NULL;
-
 	free(save_file);
 	save_file = NULL;
 
 	curl_global_cleanup();
 
-	return (int)ret;
+	return 0;
 }
