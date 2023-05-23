@@ -8,9 +8,11 @@
 #include <curl/curl.h>
 #include <json-c/json.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
-#include <assert.h>
-
+//#include <assert.h>
+#include <stdbool.h>
+#include <unistd.h>
 #include "construct_json.h"
 
 struct memory {
@@ -26,8 +28,9 @@ size_t write_callback(void *data, size_t size, size_t nmemb, void *userp)
 	struct memory *mem = (struct memory *)userp;
 	char *ptr = realloc(mem->response, mem->size + realsize + 1);
 
-	if(ptr == NULL)
+	if(ptr == NULL) {
 		return 0;  /* out of memory! */
+	}
 
 	mem->response = ptr;
 	memcpy(&(mem->response[mem->size]), data, realsize);
@@ -45,7 +48,7 @@ int main(int argc, char **argv)
 
 	if (save_file == NULL) {
 		fprintf(stderr, "%s\n", "Could not allocate space for filename.");
-		exit(1);
+		goto cleanup;
 	}
 
 	strncpy(save_file, getenv("HOME"), strlen(getenv("HOME")));
@@ -55,21 +58,37 @@ int main(int argc, char **argv)
 
 	if (api_key == NULL) {
 		fprintf(stderr, "%s\n", "Error: No API key found. Please set the environment variable OPENAI_API_KEY.");
-		exit(1);
+		goto cleanup;
 	}
 
 	if (root == NULL) {
 		root = new_chatgpt();
 	}
 
-	if (argc == 2) {
-		add_text_prompt(root, "user", argv[1]);
-	} else if (argc == 3) {
-		add_text_prompt(root, "user", argv[1]);
-		set_model(root, argv[2]);
-	} else {
+	if (argc == 1) {
 		fprintf(stderr, "%s\n", "Error: please provide an argument");
 		exit(1);
+	}
+
+
+	if(isatty(0)) {
+		add_text_prompt(root, "user", argv[1]);
+	} else {
+		add_text_prompt(root, "system", argv[1]);
+		char c = '\0';
+		char *s = NULL;
+
+		for (int i = 1;; i++) {
+			c = getchar();
+			if (c == EOF || feof(stdin)) {
+				break;
+			}
+			s = realloc(s, i + 1);
+			s[i - 1] = c;
+			s[i] = '\0';
+		}
+		add_text_prompt(root, "user", s);
+		free(s);
 	}
 
 	struct memory chunk = { .response = NULL, .size = 0 };
@@ -85,7 +104,6 @@ int main(int argc, char **argv)
 	strncpy(auth, bear, strlen(bear));
 	strcat(auth, api_key);
 
-////////////////////////////////////////////////////////////////////////////////////////////////
 	// give the api key to curl and set easy options
 	slist1 = curl_slist_append(slist1, auth);
 	free(auth);
@@ -106,38 +124,35 @@ int main(int argc, char **argv)
 	curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST");
 	curl_easy_setopt(hnd, CURLOPT_FTP_SKIP_PASV_IP, 1L);
 	curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
-//////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	ret = curl_easy_perform(hnd);
 
-	if (ret != CURLE_OK) {// || chunk.size <= 0 || chunk.memory == NULL) {
+	if (ret != CURLE_OK || chunk.size <= 0 || chunk.response == NULL) {
 		fprintf(stderr, "%s\n", "Error: curl status was not ok");
 		goto cleanup;
 	}
 
-	char *s = calloc(chunk.size + 1, 1);
-	memcpy(s, chunk.response, chunk.size - 1);
+	char *result_string = calloc(chunk.size + 1, 1);
+	memcpy(result_string, chunk.response, chunk.size);
 
-	json_object *result = json_tokener_parse(s);
+	json_object *result_json = json_tokener_parse(result_string);
 
-//	printf("%s\n",json_object_to_json_string_ext(result, JSON_C_TO_STRING_PRETTY));
+//	print the replay as full json object
+//	printf("%s\n",json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
 
-	json_object * assist_message =
-	json_object_object_get(json_object_array_get_idx(json_object_object_get(result, "choices"), 0), "message");
+	json_object *assist_message = json_object_object_get(json_object_array_get_idx(json_object_object_get(result_json, "choices"), 0), "message");
 
-	add_json_prompt(root, assist_message);
+	json_object *text = json_object_object_get(assist_message, "content");
 
+	add_text_prompt(root, "assistant", json_object_get_string(text));
 	json_object_to_file(save_file, root);
 
 	puts(json_object_get_string(json_object_object_get(assist_message, "content")));
 
-//	printf("%s\n",json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY));
-
 	cleanup:
 
-//	free_chatgpt();
-
-	free(s);
-	s = NULL;
+	free(result_string);
+	result_string = NULL;
 
 	free(chunk.response);
 	chunk.response = NULL;
@@ -149,16 +164,16 @@ int main(int argc, char **argv)
 	curl_slist_free_all(slist1);
 	slist1 = NULL;
 
-	curl_global_cleanup();
-
 	json_object_put(root);
 	root = NULL;
 
-	json_object_put(result);
-	result = NULL;
+	json_object_put(result_json);
+	result_json = NULL;
 
 	free(save_file);
 	save_file = NULL;
+
+	curl_global_cleanup();
 
 	return (int)ret;
 }
