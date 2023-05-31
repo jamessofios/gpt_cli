@@ -10,9 +10,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#include <assert.h>
-#include <stdbool.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include "construct_json.h"
 
 struct memory {
@@ -73,9 +72,56 @@ int main(int argc, char **argv)
 
 
 	if(isatty(0)) {
-		add_text_prompt(root, "user", argv[1]);
+		int opt;
+
+		char *sys_prompt = NULL;
+		char *user_prompt = NULL;
+
+		while ((opt = getopt(argc, argv, "m:t:s:u:")) != -1) {
+			switch (opt) {
+			case 'm':
+				set_model(root, optarg);
+				break;
+			case 't':
+				set_temp(root, atoi(optarg));
+				break;
+			case 's':
+//				add_text_prompt(root, "system", optarg);
+				sys_prompt = calloc(strlen(optarg) + 1, 1);
+				if (sys_prompt == NULL) {
+					goto cleanup;
+				}
+				memcpy(sys_prompt, optarg, strlen(optarg));
+				break;
+			case 'u':
+//				add_text_prompt(root, "user", optarg);
+				user_prompt = calloc(strlen(optarg) + 1, 1);
+				if (user_prompt == NULL) {
+					goto cleanup;
+				}
+				memcpy(user_prompt, optarg, strlen(optarg));
+				break;
+			default:
+				printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
+				goto cleanup;
+			}
+		}
+
+		if (sys_prompt != NULL && user_prompt != NULL) {
+			add_text_prompt(root, "system", sys_prompt);
+			free(sys_prompt);
+			add_text_prompt(root, "user", user_prompt);
+			free(user_prompt);
+		} else if (user_prompt != NULL) {
+			add_text_prompt(root, "user", user_prompt);
+			free(user_prompt);
+		} else {
+			free(sys_prompt);
+			free(user_prompt);
+			goto cleanup;
+		}
+
 	} else {
-		add_text_prompt(root, "system", argv[1]);
 		char c = '\0';
 		char *s = NULL;
 
