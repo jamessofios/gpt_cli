@@ -11,48 +11,38 @@ https://github.com/rbtylee/tutorial-jsonc/blob/master/tutorial/legacy.md
 /*
 Read chars from FILE *f and return as a json_object*
 */
-json_object *ftojson(FILE *f)
-{
-	char c       = '\0';
-	int status   = 0;
-	char *s      = NULL;
-
-	for (uintmax_t i = 1;; i++) {
-
-		c = fgetc(f);
-
-		if (c == EOF || feof(f)) {
-			break;
-		}
-
-		s = realloc(s, i);
-
-		if (s == NULL) {
-			break;
-		}
-
-		s[i - 1] = c;
-	}
-
-	json_object *root = json_tokener_parse(s);
-
-	free(s);
-
-	return root;
-}
+//json_object *ftojson(FILE *f)
+//{
+//	char c       = '\0';
+//	int status   = 0;
+//	char *s      = NULL;
+//
+//	for (uintmax_t i = 1;; i++) {
+//
+//		c = fgetc(f);
+//
+//		if (c == EOF || feof(f)) {
+//			break;
+//		}
+//
+//		s = realloc(s, i);
+//
+//		if (s == NULL) {
+//			break;
+//		}
+//
+//		s[i - 1] = c;
+//	}
+//
+//	json_object *root = json_tokener_parse(s);
+//
+//	free(s);
+//
+//	return root;
+//}
 
 int main(void)
 {
-//	json_object *root = json_object_from_file("chat.json");
-//	if (root == NULL)
-//		return 1;
-//	json_object *model = json_object_object_get(root, "model");
-//	json_object *temperature = json_object_object_get(root, "temperature");
-//
-//	printf("%s, %s\n", json_object_get_string(model), json_object_get_string(temperature));
-
-//	printf("The json string:\n\n%s\n\n", json_object_to_json_string(root));
-
 	bool has_error = false;
 
 	json_object *root = json_object_from_file("tmp.json");
@@ -62,9 +52,21 @@ int main(void)
 		goto cleanup;
 	}
 
-	printf("%s\n", json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY));
+//	get string from json
+	json_object *message_array = json_object_object_get(root, "messages");
+	if (message_array == NULL) {
+		message_array = json_object_new_array();
+		json_object_object_add(root, "messages", message_array);
+//		json_object_object_add(root, "role", json_object_new_string());
+	}
 
-	json_object_to_file("tmp2.json", root);
+	puts(json_object_get_string(message_array, "content"));
+
+	printf("%s\n", json_object_to_json_string_ext(message_array, JSON_C_TO_STRING_PRETTY));
+
+//	printf("%s\n", json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY));
+
+//	json_object_to_file("tmp2.json", root);
 
 	cleanup:
 	json_object_put(root);
