@@ -42,8 +42,6 @@ int main(int argc, char **argv)
 {
 	char *api_key = getenv("OPENAI_API_KEY");
 	char *save_file = calloc(strlen(getenv("HOME")) + strlen("/.chatgpt.json") + 1, 1);
-	CURL *hnd = NULL;
-	struct curl_slist *slist1 = NULL;
 
 	if (save_file == NULL) {
 		fprintf(stderr, "%s\n", "Could not allocate space for filename.");
@@ -138,9 +136,12 @@ int main(int argc, char **argv)
 		free(s);
 	}
 
-	struct memory chunk = { .response = NULL, .size = 0 };
 
 	// initialize curl
+	CURL *hnd = NULL;
+	struct curl_slist *slist1 = NULL;
+	struct memory chunk = { .response = NULL, .size = 0 };
+
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	CURLcode ret = 0;
 	slist1 = curl_slist_append(slist1, "Content-Type: application/json");
