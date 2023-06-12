@@ -207,13 +207,13 @@ int main(int argc, char **argv)
 	chunk.response = NULL;
 	chunk.size = 0;
 
-	cleanup:
-
 	curl_easy_cleanup(hnd);
 	hnd = NULL;
 
 	curl_slist_free_all(slist1);
 	slist1 = NULL;
+
+	cleanup:
 
 	json_object_put(root);
 	root = NULL;
