@@ -5,14 +5,16 @@
 
 //chat json data is saved in $HOME/.chatgpt.json
 
+#include "construct_json.h"
 #include <curl/curl.h>
 #include <json-c/json.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdbool.h>
-#include "construct_json.h"
+// https://www.thegeekstuff.com/2010/10/linux-error-codes/
+#include <errno.h>
 
 struct memory {
 	char *response;
@@ -41,10 +43,18 @@ size_t write_callback(void *data, size_t size, size_t nmemb, void *userp)
 int main(int argc, char **argv)
 {
 	char *api_key = getenv("OPENAI_API_KEY");
+
+	if (api_key == NULL) {
+		errno = ENOKEY;
+		perror("No API key found. Please set the environment variable OPENAI_API_KEY.");
+		goto cleanup;
+	}
+
 	char *save_file = calloc(strlen(getenv("HOME")) + strlen("/.chatgpt.json") + 1, 1);
 
 	if (save_file == NULL) {
-		fprintf(stderr, "%s\n", "Could not allocate space for filename.");
+		errno = ENOMEM;
+		perror("Could not allocate space for filename");
 		goto cleanup;
 	}
 
@@ -53,23 +63,20 @@ int main(int argc, char **argv)
 
 	json_object *root = json_object_from_file(save_file);
 
-	if (api_key == NULL) {
-		fprintf(stderr, "%s\n", "Error: No API key found. Please set the environment variable OPENAI_API_KEY.");
-		goto cleanup;
-	}
-
 	if (root == NULL) {
 		root = new_chatgpt();
 	}
 
 	if (argc == 1) {
-		fprintf(stderr, "%s\n\n", "Error: please provide an argument");
+		errno = EINVAL;
+		perror("Please provide an argument");
 		fprintf(stderr, "Information:\nUsing API key: %s\nSaving chat history in: %s\n", api_key, save_file);
 		goto cleanup;
 	}
 
 
 	if(isatty(0)) {
+
 		int opt;
 
 		char *sys_prompt = NULL;
@@ -106,13 +113,18 @@ int main(int argc, char **argv)
 		}
 
 		if (sys_prompt != NULL && user_prompt != NULL) {
+
 			add_text_prompt(root, "system", sys_prompt);
 			free(sys_prompt);
+
 			add_text_prompt(root, "user", user_prompt);
 			free(user_prompt);
+
 		} else if (user_prompt != NULL) {
+
 			add_text_prompt(root, "user", user_prompt);
 			free(user_prompt);
+
 		} else {
 			free(sys_prompt);
 			free(user_prompt);
@@ -176,7 +188,8 @@ int main(int argc, char **argv)
 	ret = curl_easy_perform(hnd);
 
 	if (ret != CURLE_OK || chunk.size <= 0 || chunk.response == NULL) {
-		fprintf(stderr, "%s\n", "Error: curl status was not ok");
+		errno = ENOMEM;
+		perror("Curl status was not ok");
 		goto cleanup;
 	}
 
@@ -223,5 +236,5 @@ int main(int argc, char **argv)
 
 	curl_global_cleanup();
 
-	return 0;
+	return errno;
 }
