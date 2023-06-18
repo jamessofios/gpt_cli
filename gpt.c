@@ -94,6 +94,8 @@ int main(int argc, char **argv)
 //				add_text_prompt(root, "system", optarg);
 				sys_prompt = calloc(strlen(optarg) + 1, 1);
 				if (sys_prompt == NULL) {
+					errno = ENOMEM;
+					perror("Could not allocate memory for sys_prompt");
 					goto cleanup;
 				}
 				memcpy(sys_prompt, optarg, strlen(optarg));
@@ -102,11 +104,15 @@ int main(int argc, char **argv)
 //				add_text_prompt(root, "user", optarg);
 				user_prompt = calloc(strlen(optarg) + 1, 1);
 				if (user_prompt == NULL) {
+					errno = ENOMEM;
+					perror("Could not allocate memory for user_prompt");
 					goto cleanup;
 				}
 				memcpy(user_prompt, optarg, strlen(optarg));
 				break;
 			default:
+				errno = EINVAL;
+				perror("Please provide a valid argument");
 				printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
 				goto cleanup;
 			}
@@ -126,6 +132,9 @@ int main(int argc, char **argv)
 			free(user_prompt);
 
 		} else {
+			errno = EINVAL;
+			perror("Please provide a valid argument");
+			printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
 			free(sys_prompt);
 			free(user_prompt);
 			goto cleanup;
