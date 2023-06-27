@@ -50,16 +50,16 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	char *save_file = calloc(strlen(getenv("HOME")) + strlen("/.chatgpt.json") + 1, 1);
-
+	char *save_file = malloc(strlen(getenv("HOME")) + strlen("/.chatgpt.json") + 1);
+	save_file[strlen(getenv("HOME")) + strlen("/.chatgpt.json")] = '\0';
 	if (save_file == NULL) {
 		errno = ENOMEM;
 		perror("Could not allocate space for filename");
 		goto cleanup;
 	}
 
-	strncpy(save_file, getenv("HOME"), strlen(getenv("HOME")));
-	strcat(save_file, "/.chatgpt.json");
+	memcpy(save_file, getenv("HOME"), strlen(getenv("HOME")));
+	memcpy(save_file + strlen(getenv("HOME")), "/.chatgpt.json", strlen("/.chatgpt.json") );
 
 	json_object *root = json_object_from_file(save_file);
 
@@ -92,7 +92,8 @@ int main(int argc, char **argv)
 				break;
 			case 's':
 //				add_text_prompt(root, "system", optarg);
-				sys_prompt = calloc(strlen(optarg) + 1, 1);
+				sys_prompt = malloc(strlen(optarg) + 1);
+				sys_prompt[strlen(optarg)] = '\0';
 				if (sys_prompt == NULL) {
 					errno = ENOMEM;
 					perror("Could not allocate memory for sys_prompt");
@@ -102,7 +103,8 @@ int main(int argc, char **argv)
 				break;
 			case 'u':
 //				add_text_prompt(root, "user", optarg);
-				user_prompt = calloc(strlen(optarg) + 1, 1);
+				user_prompt = malloc(strlen(optarg) + 1);
+				user_prompt[strlen(optarg)] = '\0';
 				if (user_prompt == NULL) {
 					errno = ENOMEM;
 					perror("Could not allocate memory for user_prompt");
@@ -169,9 +171,10 @@ int main(int argc, char **argv)
 
 	// get api key
 	char *bear = "Authorization: Bearer ";
-	char *auth = calloc(strlen(bear) + strlen(api_key) + 1, 1);
-	strncpy(auth, bear, strlen(bear));
-	strcat(auth, api_key);
+	char *auth = malloc(strlen(bear) + strlen(api_key) + 1);
+	auth[strlen(bear) + strlen(api_key)] = '\0';
+	memcpy(auth, bear, strlen(bear));
+	memcpy(auth + strlen(bear), api_key, strlen(api_key));//strcat(auth, api_key);
 
 	// give the api key to curl and set easy options
 	slist1 = curl_slist_append(slist1, auth);
@@ -202,7 +205,8 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	char *result_string = calloc(chunk.size + 1, 1);
+	char *result_string = malloc(chunk.size + 1);
+	result_string[chunk.size] = '\0';
 	memcpy(result_string, chunk.response, chunk.size);
 
 	json_object *result_json = json_tokener_parse(result_string);
