@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 		char *sys_prompt = NULL;
 		char *user_prompt = NULL;
 
-		while ((opt = getopt(argc, argv, "m:t:s:u:")) != -1) {
+		while ((opt = getopt(argc, argv, "m:t:s:u:r")) != -1) {
 			switch (opt) {
 			case 'm':
 				set_model(root, optarg);
@@ -91,7 +91,6 @@ int main(int argc, char **argv)
 				set_temp(root, atoi(optarg));
 				break;
 			case 's':
-//				add_text_prompt(root, "system", optarg);
 				sys_prompt = malloc(strlen(optarg) + 1);
 				sys_prompt[strlen(optarg)] = '\0';
 				if (sys_prompt == NULL) {
@@ -102,7 +101,6 @@ int main(int argc, char **argv)
 				memcpy(sys_prompt, optarg, strlen(optarg));
 				break;
 			case 'u':
-//				add_text_prompt(root, "user", optarg);
 				user_prompt = malloc(strlen(optarg) + 1);
 				user_prompt[strlen(optarg)] = '\0';
 				if (user_prompt == NULL) {
@@ -112,6 +110,15 @@ int main(int argc, char **argv)
 				}
 				memcpy(user_prompt, optarg, strlen(optarg));
 				break;
+			case 'r':
+//				TODO: repl loop goes here
+				puts("Frosty!");
+				break;
+			case '?':
+				errno = EINVAL;
+				perror("Please provide a valid argument");
+				printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
+				goto cleanup;
 			default:
 				errno = EINVAL;
 				perror("Please provide a valid argument");
