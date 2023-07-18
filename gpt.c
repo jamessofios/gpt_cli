@@ -42,7 +42,7 @@ size_t write_callback(void *data, size_t size, size_t nmemb, void *userp)
 
 int main(int argc, char **argv)
 {
-	char *api_key = getenv("OPENAI_API_KEY");
+	const char *api_key = getenv("OPENAI_API_KEY");
 
 	if (api_key == NULL) {
 		errno = ENOKEY;
@@ -50,39 +50,16 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	char *save_file = malloc(strlen(getenv("HOME")) + strlen("/.chatgpt.json") + 1);
-	save_file[strlen(getenv("HOME")) + strlen("/.chatgpt.json")] = '\0';
-	if (save_file == NULL) {
-		errno = ENOMEM;
-		perror("Could not allocate space for filename");
-		goto cleanup;
-	}
-
-	memcpy(save_file, getenv("HOME"), strlen(getenv("HOME")));
-	memcpy(save_file + strlen(getenv("HOME")), "/.chatgpt.json", strlen("/.chatgpt.json") );
-
-	json_object *root = json_object_from_file(save_file);
-
-	if (root == NULL) {
-		root = new_chatgpt();
-	}
-
-	if (argc == 1) {
-		errno = EINVAL;
-		perror("Please provide an argument");
-		fprintf(stderr, "Information:\nUsing API key: %s\nSaving chat history in: %s\n", api_key, save_file);
-		goto cleanup;
-	}
-
+	json_object *root = NULL;
+	char *save_file = NULL;
 
 	if(isatty(0)) {
 
-		int opt;
-
+		int opt = 0;
 		char *sys_prompt = NULL;
 		char *user_prompt = NULL;
 
-		while ((opt = getopt(argc, argv, "m:t:s:u:r")) != -1) {
+		while ((opt = getopt(argc, argv, "m:t:s:u:j:r")) != -1) {
 			switch (opt) {
 			case 'm':
 				set_model(root, optarg);
@@ -114,6 +91,14 @@ int main(int argc, char **argv)
 //				TODO: repl loop goes here
 				puts("Frosty!");
 				break;
+			case 'j':
+				save_file = malloc(strlen(optarg) + 1);
+				save_file[strlen(optarg)] = '\0';
+				memcpy(save_file, optarg, (strlen(optarg) + 1) );
+				root = json_object_from_file(save_file);
+
+				if (root == NULL) { root = new_chatgpt(); }
+				break;
 			case '?':
 				errno = EINVAL;
 				perror("Please provide a valid argument");
@@ -125,6 +110,10 @@ int main(int argc, char **argv)
 				printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
 				goto cleanup;
 			}
+		}
+
+		if (root == NULL) {
+			root = new_chatgpt();
 		}
 
 		if (sys_prompt != NULL && user_prompt != NULL) {
@@ -166,6 +155,14 @@ int main(int argc, char **argv)
 		free(s);
 	}
 
+//	if (save_file == NULL) {
+//		errno = ENOMEM;
+//		perror("Could not allocate space for filename");
+//		goto cleanup;
+//	}
+
+//	memcpy(save_file, getenv("HOME"), strlen(getenv("HOME")));
+//	memcpy(save_file + strlen(getenv("HOME")), "/.chatgpt.json", strlen("/.chatgpt.json") );
 
 	// initialize curl
 	CURL *hnd = NULL;
@@ -226,7 +223,10 @@ int main(int argc, char **argv)
 	json_object *text = json_object_object_get(assist_message, "content");
 
 	add_text_prompt(root, "assistant", json_object_get_string(text));
-	json_object_to_file(save_file, root);
+
+	if (save_file != NULL) {
+		json_object_to_file(save_file, root);
+	}
 
 	puts(json_object_get_string(json_object_object_get(assist_message, "content")));
 
