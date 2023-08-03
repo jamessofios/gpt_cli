@@ -3,8 +3,6 @@
 // https://ai.stackexchange.com/questions/39837/meaning-of-roles-in-the-api-of-gpt-4-chatgpt-system-user-assistant
 // https://stackoverflow.com/questions/3840582/still-reachable-leak-detected-by-valgrind
 
-//chat json data is saved in $HOME/.chatgpt.json
-
 #include "construct_json.h"
 #include <curl/curl.h>
 #include <json-c/json.h>
@@ -13,6 +11,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 // https://www.thegeekstuff.com/2010/10/linux-error-codes/
 #include <errno.h>
 
@@ -60,6 +59,7 @@ int main(int argc, char **argv)
 		char *user_prompt = NULL;
 
 		while ((opt = getopt(argc, argv, "m:t:s:u:j:r")) != -1) {
+
 			switch (opt) {
 			case 'm':
 				set_model(root, optarg);
@@ -68,8 +68,7 @@ int main(int argc, char **argv)
 				set_temp(root, atoi(optarg));
 				break;
 			case 's':
-				sys_prompt = malloc(strlen(optarg) + 1);
-				sys_prompt[strlen(optarg)] = '\0';
+				sys_prompt = calloc(strlen(optarg) + 1, 1);
 				if (sys_prompt == NULL) {
 					errno = ENOMEM;
 					perror("Could not allocate memory for sys_prompt");
@@ -78,8 +77,7 @@ int main(int argc, char **argv)
 				memcpy(sys_prompt, optarg, strlen(optarg));
 				break;
 			case 'u':
-				user_prompt = malloc(strlen(optarg) + 1);
-				user_prompt[strlen(optarg)] = '\0';
+				user_prompt = calloc(strlen(optarg) + 1, 1);
 				if (user_prompt == NULL) {
 					errno = ENOMEM;
 					perror("Could not allocate memory for user_prompt");
@@ -92,8 +90,7 @@ int main(int argc, char **argv)
 				puts("Frosty!");
 				break;
 			case 'j':
-				save_file = malloc(strlen(optarg) + 1);
-				save_file[strlen(optarg)] = '\0';
+				save_file = calloc(strlen(optarg) + 1, 1);
 				memcpy(save_file, optarg, (strlen(optarg) + 1) );
 				root = json_object_from_file(save_file);
 
@@ -104,11 +101,13 @@ int main(int argc, char **argv)
 				perror("Please provide a valid argument");
 				printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
 				goto cleanup;
+				break;
 			default:
 				errno = EINVAL;
 				perror("Please provide a valid argument");
 				printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
 				goto cleanup;
+				break;
 			}
 		}
 
@@ -132,13 +131,18 @@ int main(int argc, char **argv)
 		} else {
 			errno = EINVAL;
 			perror("Please provide a valid argument");
-			printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
+			printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt] [-j json-file]\n", argv[0]);
 			free(sys_prompt);
 			free(user_prompt);
 			goto cleanup;
 		}
 
 	} else {
+
+		if (root == NULL) {
+			root = new_chatgpt();
+		}
+
 		char c = '\0';
 		char *s = NULL;
 
@@ -175,8 +179,7 @@ int main(int argc, char **argv)
 
 	// get api key
 	char *bear = "Authorization: Bearer ";
-	char *auth = malloc(strlen(bear) + strlen(api_key) + 1);
-	auth[strlen(bear) + strlen(api_key)] = '\0';
+	char *auth = calloc(strlen(bear) + strlen(api_key) + 1, 1);
 	memcpy(auth, bear, strlen(bear));
 	memcpy(auth + strlen(bear), api_key, strlen(api_key));//strcat(auth, api_key);
 
@@ -209,8 +212,7 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	char *result_string = malloc(chunk.size + 1);
-	result_string[chunk.size] = '\0';
+	char *result_string = calloc(chunk.size + 1, 1);
 	memcpy(result_string, chunk.response, chunk.size);
 
 	json_object *result_json = json_tokener_parse(result_string);
