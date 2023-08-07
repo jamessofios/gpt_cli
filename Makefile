@@ -1,3 +1,5 @@
+#!/usr/bin/env -S make -f
+
 # Compiler
 CC := gcc
 
