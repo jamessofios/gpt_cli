@@ -29,7 +29,8 @@ all: $(TARGET)
 debug: CFLAGS += -O0 -g
 debug: all
 
-release: CFLAGS += -O3 -s
+release: CFLAGS += -O3
+release: STRIP := -s
 release: all
 
 # Compile object files
@@ -40,8 +41,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 # Link object files and create binary
 $(TARGET): $(OBJ)
 	@mkdir -p $(dir $(TARGET))
-	$(CC) $(OBJ) -o $(TARGET) $(CLIBS) $(CFLAGS)
-
+	$(CC) $(OBJ) -o $(TARGET) $(CLIBS) $(CFLAGS) $(STRIP)
 # Clean object files and binary
 clean:
 	$(RM) -r $(OBJ_DIR) $(TARGET)
