@@ -3,123 +3,54 @@
 // https://ai.stackexchange.com/questions/39837/meaning-of-roles-in-the-api-of-gpt-4-chatgpt-system-user-assistant
 // https://stackoverflow.com/questions/3840582/still-reachable-leak-detected-by-valgrind
 
+#include "main.h"
 #include "construct_json.h"
 #include "send_request.h"
+#include "parse_options.h"
 #include <json-c/json.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
-#include <getopt.h>
 // https://www.thegeekstuff.com/2010/10/linux-error-codes/
 #include <errno.h>
 
 int main(int argc, char **argv)
 {
-	const char *api_key = getenv("OPENAI_API_KEY");
+	struct main_state *ms = alloc_main_state();
 
-	if (api_key == NULL) {
+//	assert(ms != NULL);
+
+	if (ms == NULL) {
+		errno = ENOMEM;
+		perror("Could not allocate state");
+		goto cleanup;
+	}
+
+	ms->api_key = getenv("OPENAI_API_KEY");
+
+//	assert(ms->api_key != NULL);
+
+	if (ms->api_key == NULL) {
 		errno = ENOKEY;
 		perror("No API key found. Please set the environment variable OPENAI_API_KEY.");
 		goto cleanup;
 	}
 
-	json_object *root = NULL;
-	char *save_file = NULL;
-
 	if(isatty(0)) {
 
-		int opt = 0;
-		char *sys_prompt = NULL;
-		char *user_prompt = NULL;
-
-		while ((opt = getopt(argc, argv, "m:t:s:u:j:r")) != -1) {
-
-			switch (opt) {
-			case 'm':
-				set_model(root, optarg);
-				break;
-			case 't':
-				set_temp(root, atoi(optarg));
-				break;
-			case 's':
-				sys_prompt = calloc(strlen(optarg) + 1, 1);
-				if (sys_prompt == NULL) {
-					errno = ENOMEM;
-					perror("Could not allocate memory for sys_prompt");
-					goto cleanup;
-				}
-				memcpy(sys_prompt, optarg, strlen(optarg));
-				break;
-			case 'u':
-				user_prompt = calloc(strlen(optarg) + 1, 1);
-				if (user_prompt == NULL) {
-					errno = ENOMEM;
-					perror("Could not allocate memory for user_prompt");
-					goto cleanup;
-				}
-				memcpy(user_prompt, optarg, strlen(optarg));
-				break;
-			case 'r':
-//				TODO: repl loop goes here
-				puts("Frosty!");
-				break;
-			case 'j':
-				save_file = calloc(strlen(optarg) + 1, 1);
-				memcpy(save_file, optarg, (strlen(optarg) + 1) );
-				root = json_object_from_file(save_file);
-
-				if (root == NULL) { root = new_chatgpt(); }
-				break;
-			case '?':
-				errno = EINVAL;
-				perror("Please provide a valid argument");
-				printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
-				goto cleanup;
-				break;
-			default:
-				errno = EINVAL;
-				perror("Please provide a valid argument");
-				printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt]\n", argv[0]);
-				goto cleanup;
-				break;
-			}
-		}
-
-		if (root == NULL) {
-			root = new_chatgpt();
-		}
-
-		if (sys_prompt != NULL && user_prompt != NULL) {
-
-			add_text_prompt(root, "system", sys_prompt);
-			free(sys_prompt);
-
-			add_text_prompt(root, "user", user_prompt);
-			free(user_prompt);
-
-		} else if (user_prompt != NULL) {
-
-			add_text_prompt(root, "user", user_prompt);
-			free(user_prompt);
-
-		} else {
-			errno = EINVAL;
-			perror("Please provide a valid argument");
-			printf("Usage: %s [-m model] [-t temperature] [-s system-prompt] [-u user-prompt] [-j json-file]\n", argv[0]);
-			free(sys_prompt);
-			free(user_prompt);
+		parse_options(argc, argv, ms);
+		if (errno == EINVAL) {
 			goto cleanup;
 		}
-
 	} else {
 
-		if (root == NULL) {
-			root = new_chatgpt();
+		if (ms->root == NULL) {
+			ms->root = new_chatgpt();
 		}
 
-		char c = '\0';
+		signed char c = '\0';
 		char *s = NULL;
 
 		for (int i = 1;; i++) {
@@ -131,13 +62,20 @@ int main(int argc, char **argv)
 			s[i - 1] = c;
 			s[i] = '\0';
 		}
-		add_text_prompt(root, "user", s);
-		free(s);
+//		assert(s != NULL);
+		if (s != NULL) {
+			add_text_prompt(ms->root, "user", s);
+			free(s);
+		} else {
+			errno = EINVAL;
+			perror("You passed an empty string through stdin");
+			goto cleanup;
+		}
 	}
 
 	char *result_string = send_request("https://api.openai.com/v1/chat/completions",
-					api_key,
-					json_object_to_json_string(root));
+					ms->api_key,
+					json_object_to_json_string(ms->root));
 
 	if (result_string == NULL) {
 		errno = ENOMEM;
@@ -150,14 +88,26 @@ int main(int argc, char **argv)
 //	print the replay as full json object
 //	printf("%s\n",json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
 
+
+//	TODO: Add error handling for when the API sends an error json back
+//	assert(json_object_object_get(result_json, "error") == NUL);
+
+	if (json_object_object_get(result_json, "error") != NULL) {
+		errno = EBADR;
+		fprintf(stderr, "%s\n", json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
+		free(result_string);
+		json_object_put(result_json);
+		goto cleanup;
+	}
+
 	json_object *assist_message = json_object_object_get(json_object_array_get_idx(json_object_object_get(result_json, "choices"), 0), "message");
 
 	json_object *text = json_object_object_get(assist_message, "content");
 
-	add_text_prompt(root, "assistant", json_object_get_string(text));
+	add_text_prompt(ms->root, "assistant", json_object_get_string(text));
 
-	if (save_file != NULL) {
-		json_object_to_file(save_file, root);
+	if (ms->json_file != NULL) {
+		json_object_to_file(ms->json_file, ms->root);
 	}
 
 	puts(json_object_get_string(json_object_object_get(assist_message, "content")));
@@ -168,13 +118,9 @@ int main(int argc, char **argv)
 	json_object_put(result_json);
 	result_json = NULL;
 
-	cleanup:
+cleanup:
 
-	json_object_put(root);
-	root = NULL;
-
-	free(save_file);
-	save_file = NULL;
+	free_main_state(ms);
 
 	return errno;
 }
