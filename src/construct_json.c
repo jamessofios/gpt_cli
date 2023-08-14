@@ -16,9 +16,9 @@ void add_text_prompt(json_object *input, const char *role, const char *prompt_te
 	prompt_json = NULL;
 }
 
-void set_temp(json_object *input, int temp)
+void set_temp(json_object *input, float temp)
 {
-	json_object_object_add(input, "temperature", json_object_new_int(temp));
+	json_object_object_add(input, "temperature", json_object_new_double(temp));
 }
 
 void set_model(json_object *input, char* model)
@@ -31,7 +31,7 @@ json_object *new_chatgpt(void)
 	json_object *main_obj = json_object_new_object();
 
 	json_object_object_add(main_obj, "model", json_object_new_string("gpt-3.5-turbo"));
-	json_object_object_add(main_obj, "temperature", json_object_new_int(1));
+//	json_object_object_add(main_obj, "temperature", json_object_new_int(1));
 	json_object_object_add(main_obj, "messages", json_object_new_array());
 
 	return main_obj;
