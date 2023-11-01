@@ -15,12 +15,15 @@
 #include <unistd.h>
 // https://www.thegeekstuff.com/2010/10/linux-error-codes/
 #include <errno.h>
+#include <assert.h>
 
 int main(int argc, char **argv)
 {
 	struct main_state *ms = alloc_main_state();
 
-//	assert(ms != NULL);
+	#ifdef DEBUG_ASSERTS
+		assert(ms != NULL);
+	#endif
 
 	if (ms == NULL) {
 		errno = ENOMEM;
@@ -30,11 +33,13 @@ int main(int argc, char **argv)
 
 	ms->api_key = getenv("OPENAI_API_KEY");
 
-//	assert(ms->api_key != NULL);
+	#ifdef DEBUG_ASSERTS
+		assert(ms->api_key != NULL);
+	#endif
 
 	if (ms->api_key == NULL) {
 		errno = ENOKEY;
-		perror("No API key found. Please set the environment variable OPENAI_API_KEY.");
+		perror("No API key found. Please get an API key from OpenAI and set the environment variable OPENAI_API_KEY");
 		goto cleanup;
 	}
 
@@ -55,14 +60,18 @@ int main(int argc, char **argv)
 
 		for (int i = 1;; i++) {
 			c = getchar();
-			if (c == EOF || feof(stdin)) {
+			if (c == EOF || feof(stdin) || c == '\0') {
 				break;
 			}
 			s = realloc(s, i + 1);
 			s[i - 1] = c;
 			s[i] = '\0';
 		}
-//		assert(s != NULL);
+
+		#ifdef DEBUG_ASSERTS
+			assert(s != NULL);
+		#endif
+
 		if (s != NULL) {
 			add_text_prompt(ms->root, "user", s);
 			free(s);
@@ -84,13 +93,6 @@ int main(int argc, char **argv)
 	}
 
 	json_object *result_json = json_tokener_parse(result_string);
-
-//	print the replay as full json object
-//	printf("%s\n",json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
-
-
-//	TODO: Add error handling for when the API sends an error json back
-//	assert(json_object_object_get(result_json, "error") == NUL);
 
 	if (json_object_object_get(result_json, "error") != NULL) {
 		errno = EBADR;

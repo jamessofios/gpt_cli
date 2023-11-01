@@ -26,7 +26,7 @@ TARGET := mgpt
 .DEFAULT_GOAL := release
 all: $(TARGET)
 
-debug: CFLAGS += -O0 -g
+debug: CFLAGS += -O0 -g -D DEBUG_ASSERTS=true
 debug: all
 
 release: CFLAGS += -O3
