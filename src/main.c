@@ -86,9 +86,13 @@ int main(int argc, char **argv)
 					ms->api_key,
 					json_object_to_json_string(ms->root));
 
+	#ifdef DEBUG_ASSERTS
+		assert(result_string != NULL);
+	#endif
+
 	if (result_string == NULL) {
-		errno = ENOMEM;
-		perror("Curl status was not ok");
+		errno = ENETUNREACH;
+		perror("Curl status was not OK or it returned NULL");
 		goto cleanup;
 	}
 
