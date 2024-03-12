@@ -31,7 +31,7 @@ And of course _gpt_cli_ requires use of OpenAI's ChatGPT API to funtion
 
 
 - First install the dependancies using the appropriate package manager for your system
--- The dependancies are libcurl and libjson-c
+- The dependancies are `libcurl` and `libjson-c`
 - Next use the make command in this git repository folder to build the application
 
 ## How to use
