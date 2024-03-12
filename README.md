@@ -13,17 +13,14 @@ _gpt_cli_ is a flexible, easily scriptable ChatGPT interface for the UNIX/Linux 
 - Export chat history as OpenAI API compatible JSON
 - All data is stored either as plain text or as JSON
 
-Markdown is a lightweight markup language based on the formatting conventions
-that people naturally use in email.
-
 > The overriding design goal for gpt_cli is to be as friendly to the UNIX/Linux shell environment as possible.
 
 ## Tech
 
 _gpt_cli_ uses a couple of open source libraries to work properly:
 
-- libcurl
-- libjson-c
+- `libcurl`
+- `libjson-c`
 
 And of course _gpt_cli_ requires use of OpenAI's ChatGPT API to funtion
 
