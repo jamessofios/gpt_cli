@@ -44,3 +44,7 @@ Send a prompt to ChatGPT where you chnage the model to gpt-4 and set the tempura
 ```sh
 gpt -u 'Hello!' -s 'You are a dog' -m 'gpt-4' -t '0'
 ```
+The command's options are listed below:
+```sh
+gpt [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file]
+```
