@@ -43,7 +43,6 @@ char* send_request(const char *restrict url, const char *restrict api_key, const
 	ret = curl_easy_perform(hnd);
 
 	if (ret != CURLE_OK || chunk.size <= 0 || chunk.response == NULL) {
-		// Curl status was not ok
 		goto cleanup;
 	}
 
@@ -75,7 +74,7 @@ size_t write_callback(void *data, size_t size, size_t nmemb, void *userp)
 	char *ptr = realloc(mem->response, mem->size + realsize + 1);
 
 	if(ptr == NULL) {
-		return 0;  /* out of memory! */
+		return 0;
 	}
 
 	mem->response = ptr;

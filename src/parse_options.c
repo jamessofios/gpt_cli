@@ -2,6 +2,11 @@
 
 void parse_options(const int argc, char **restrict argv, struct main_state *restrict ms) {
 
+	if (argc == 1) {
+		errno = EINVAL;
+		return;
+	}
+
 	static struct option long_options[] = {
 		{"user_prompt", required_argument, NULL, 'u'},
 		{"system_prompt", required_argument, NULL, 's'},
@@ -86,8 +91,6 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 		add_text_prompt(ms->root, "user", ms->user_prompt);
 	} else {
 		errno = EINVAL;
-		perror("Please provide a valid argument");
-		printf("Usage: %s [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file]\n", argv[0]);
 	}
 }
 
