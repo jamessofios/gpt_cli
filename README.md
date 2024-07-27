@@ -26,9 +26,8 @@ And of course _gpt_cli_ requires use of OpenAI's ChatGPT API to function
 
 ## Installation
 
-
 - First install the dependencies using the appropriate package manager for your system
-- The dependencies are `libcurl` and `libjson-c`
+- The dependencies are `libcurl` and `libjson-c`. In Debian and Ubuntu run `sudo apt install libcurl4 libcurl4-gnutls-dev` and `sudo apt install libjson-c5 libjson-c-dev` to install the required dependencies
 - Next use the `make` command in this git repository folder to build the application
 
 ## How to use
@@ -48,4 +47,3 @@ The command's options are listed below:
 ```sh
 gpt [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file]
 ```
-
