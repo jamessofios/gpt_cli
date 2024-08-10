@@ -81,7 +81,7 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 	}
 
 	if (ms->root == NULL) { ms->root = new_chatgpt(); }
-	if (model != NULL) { set_model(ms->root, model); }
+	if (model != NULL) { set_model(ms->root, model); free(model); model = NULL; }
 
 	// check if temp is valid. Otherwise it will default to 1
 	if (temp >= 0.0 && temp <= 2.0 ) { set_temp(ms->root, temp); }
