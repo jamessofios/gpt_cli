@@ -43,10 +43,13 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	if(isatty(0)) {
+	if(isatty(STDIN_FILENO)) {
 
 		parse_options(argc, argv, ms);
 		if (errno == EINVAL) {
+			goto cleanup;
+		} else if (errno == 134) {
+			errno = 0;
 			goto cleanup;
 		}
 	} else {

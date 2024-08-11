@@ -1,5 +1,21 @@
 #include "parse_options.h"
 
+static const char *help_text = "Usage: %s [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file] [-h --help]\n";
+
+enum argument_detection {
+	arg_not_found = -1,
+	user_prompt = 0,
+	system_prompt = 1,
+	json_file = 2,
+	temperature = 3,
+	model = 4,
+	help = 5
+};
+
+enum argument_detection args_detect[6] = { [0] = arg_not_found, [1] = arg_not_found,
+					  [2] = arg_not_found, [3] = arg_not_found,
+					  [4] = arg_not_found, [5] = arg_not_found };
+
 void parse_options(const int argc, char **restrict argv, struct main_state *restrict ms) {
 
 	if (argc == 1) {
@@ -13,20 +29,23 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 		{"json_file", required_argument, NULL, 'j'},
 		{"temperature", required_argument, NULL, 't'},
 		{"model", required_argument, NULL, 'm'},
+		{"help", no_argument, NULL, 'h'},
 		//the last entry in the array must be all zeros for getopt_long to know where the array ends
 		{NULL, 0, NULL, '\0'}
 	};
 
 	// Specifing signed char because clang on termux defaults to unsigned char
-	signed char ch = '\0';
+	signed char choice = '\0';
 
 	float temp = -1.0;
-	char *model = NULL;
+	char *ai_model = NULL;
 
-	while ((ch = getopt_long(argc, argv, "s:u:j:t:m:", long_options, NULL)) != -1) {
+	while ((choice = getopt_long(argc, argv, "s:u:j:t:m:h", long_options, NULL)) != -1) {
 
-		switch (ch) {
+		switch (choice) {
 			case 's':
+				args_detect[system_prompt] = system_prompt;
+
 				ms->system_prompt = calloc(1, strlen(optarg) + 1);
 
 				if (ms->system_prompt == NULL) {
@@ -37,6 +56,8 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 				break;
 
 			case 'u':
+				args_detect[user_prompt] = user_prompt;
+
 				ms->user_prompt = calloc(1, strlen(optarg) + 1);
 				if (ms->user_prompt == NULL) {
 					break;
@@ -46,6 +67,9 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 				break;
 
 			case 'j':
+
+				args_detect[json_file] = json_file;
+
 				ms->json_file = calloc(1, strlen(optarg) + 1);
 				if (ms->json_file == NULL) {
 					break;
@@ -61,27 +85,34 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 
 				break;
 			case 't':
+				args_detect[temperature] = temperature;
+
 				temp = atof(optarg);
 				break;
 			case 'm':
-				model = calloc(1, strlen(optarg) + 1);
-				if (model == NULL) {
+				args_detect[model] = model;
+
+				ai_model = calloc(1, strlen(optarg) + 1);
+				if (ai_model == NULL) {
 					break;
 				}
 
-				memcpy(model, optarg, strlen(optarg));
+				memcpy(ai_model, optarg, strlen(optarg));
 
+				break;
+			case 'h':
+				args_detect[help] = help;
+				printf(help_text, argv[0]);
 				break;
 			default:
 				errno = EINVAL;
 				perror("Please provide a valid argument");
-				printf("Usage: %s [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file]\n", argv[0]);
 				break;
 		}
 	}
 
 	if (ms->root == NULL) { ms->root = new_chatgpt(); }
-	if (model != NULL) { set_model(ms->root, model); free(model); model = NULL; }
+	if (ai_model != NULL) { set_model(ms->root, ai_model); free(ai_model); ai_model = NULL; }
 
 	// check if temp is valid. Otherwise it will default to 1
 	if (temp >= 0.0 && temp <= 2.0 ) { set_temp(ms->root, temp); }
@@ -90,7 +121,7 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 	if (ms->user_prompt != NULL) {
 		add_text_prompt(ms->root, "user", ms->user_prompt);
 	} else {
-		errno = EINVAL;
+		if (args_detect[help] == help) { errno = 134; } else { errno = EINVAL; }
 	}
 }
 
