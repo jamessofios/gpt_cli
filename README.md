@@ -45,5 +45,5 @@ gpt -u 'Hello!' -s 'You are a dog' -m 'gpt-4' -t '0'
 ```
 The command's options are listed below:
 ```sh
-gpt [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file]
+gpt [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file] [-h --help]
 ```
