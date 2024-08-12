@@ -18,7 +18,7 @@ SRC := $(wildcard $(SRC_DIR)/*.c)
 OBJ := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC))
 
 # Binary name
-TARGET := mgpt
+TARGET := gpt
 
 .PHONY: all clean debug release
 
