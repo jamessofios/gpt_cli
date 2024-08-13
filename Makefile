@@ -26,7 +26,7 @@ TARGET := gpt
 .DEFAULT_GOAL := release
 all: $(TARGET)
 
-debug: CFLAGS += -O0 -g -D DEBUG_ASSERTS=true
+debug: CFLAGS += -O0 -g
 debug: all
 
 release: CFLAGS += -O3
