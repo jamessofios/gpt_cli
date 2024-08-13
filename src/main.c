@@ -20,10 +20,8 @@
 int main(int argc, char **argv)
 {
 	struct main_state *ms = alloc_main_state();
+	enum argument_detection *args_detect = NULL;
 
-	#ifdef DEBUG_ASSERTS
-		assert(ms != NULL);
-	#endif
 
 	if (ms == NULL) {
 		errno = ENOMEM;
@@ -33,26 +31,25 @@ int main(int argc, char **argv)
 
 	ms->api_key = getenv("OPENAI_API_KEY");
 
-	#ifdef DEBUG_ASSERTS
-		assert(ms->api_key != NULL);
-	#endif
-
 	if (ms->api_key == NULL) {
 		errno = ENOKEY;
 		perror("No API key found. Please get an API key from OpenAI and set the environment variable OPENAI_API_KEY");
 		goto cleanup;
 	}
 
-	if(isatty(STDIN_FILENO)) {
+	args_detect = parse_options(argc, argv, ms);
 
-		parse_options(argc, argv, ms);
+	if (args_detect == NULL && isatty(STDIN_FILENO)) { goto cleanup; }
+
+do {
+
+	if(isatty(STDIN_FILENO) && args_detect[repl] != repl) {
+
 		if (errno == EINVAL) {
 			goto cleanup;
-		} else if (errno == 134) {
-			errno = 0;
-			goto cleanup;
 		}
-	} else {
+
+	} else if (!isatty(STDIN_FILENO) || args_detect[repl] == repl) {
 
 		if (ms->root == NULL) {
 			ms->root = new_chatgpt();
@@ -61,26 +58,29 @@ int main(int argc, char **argv)
 		signed char c = '\0';
 		char *s = NULL;
 
+
+		if (args_detect != NULL && args_detect[repl] == repl) { printf("> "); }
+
+
 		for (int i = 1;; i++) {
 			c = getchar();
-			if (c == EOF || feof(stdin) || c == '\0') {
-				break;
-			}
+
+			if (c == EOF || feof(stdin) || c == '\0') { break; }
+			if (args_detect != NULL && args_detect[repl] == repl && c == '\n') { break; }
+
 			s = realloc(s, i + 1);
 			s[i - 1] = c;
 			s[i] = '\0';
 		}
 
-		#ifdef DEBUG_ASSERTS
-			assert(s != NULL);
-		#endif
-
 		if (s != NULL) {
+			if (args_detect != NULL && args_detect[repl] == repl && !strcmp(s, "exit")) { free(s); goto cleanup; }
 			add_text_prompt(ms->root, "user", s);
 			free(s);
 		} else {
-			errno = EINVAL;
-			perror("You passed an empty string through stdin");
+//			errno = EINVAL;
+//			perror("You passed an empty string through stdin");
+			errno = 0;
 			goto cleanup;
 		}
 	}
@@ -88,10 +88,6 @@ int main(int argc, char **argv)
 	char *result_string = send_request("https://api.openai.com/v1/chat/completions",
 					ms->api_key,
 					json_object_to_json_string(ms->root));
-
-	#ifdef DEBUG_ASSERTS
-		assert(result_string != NULL);
-	#endif
 
 	if (result_string == NULL) {
 		errno = ENETUNREACH;
@@ -127,8 +123,11 @@ int main(int argc, char **argv)
 	json_object_put(result_json);
 	result_json = NULL;
 
+} while (1);
+
 cleanup:
 
+	free(args_detect);
 	free_main_state(ms);
 
 	return errno;

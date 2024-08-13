@@ -1,27 +1,24 @@
 #include "parse_options.h"
 
-static const char *help_text = "Usage: %s [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file] [-h --help]\n";
-
-enum argument_detection {
-	arg_not_found = -1,
-	user_prompt = 0,
-	system_prompt = 1,
-	json_file = 2,
-	temperature = 3,
-	model = 4,
-	help = 5
-};
-
-enum argument_detection args_detect[6] = { [0] = arg_not_found, [1] = arg_not_found,
-					  [2] = arg_not_found, [3] = arg_not_found,
-					  [4] = arg_not_found, [5] = arg_not_found };
-
-void parse_options(const int argc, char **restrict argv, struct main_state *restrict ms) {
+enum argument_detection *parse_options(const int argc, char **restrict argv, struct main_state *restrict ms) {
 
 	if (argc == 1) {
 		errno = EINVAL;
-		return;
+		return NULL;
 	}
+
+	enum argument_detection *args_detect = malloc(7 * sizeof(*args_detect));
+
+	if (args_detect == NULL) { return NULL; }
+
+
+	memset(args_detect, (signed int)-1, 7);
+
+	/*
+	*args_detect = { [user_prompt] = arg_not_found, [system_prompt] = arg_not_found,
+					  [json_file] = arg_not_found, [temperature] = arg_not_found,
+					  [model] = arg_not_found, [help] = arg_not_found, [repl] = arg_not_found };
+	*/
 
 	static struct option long_options[] = {
 		{"user_prompt", required_argument, NULL, 'u'},
@@ -30,6 +27,7 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 		{"temperature", required_argument, NULL, 't'},
 		{"model", required_argument, NULL, 'm'},
 		{"help", no_argument, NULL, 'h'},
+		{"repl", no_argument, NULL, 'r'},
 		//the last entry in the array must be all zeros for getopt_long to know where the array ends
 		{NULL, 0, NULL, '\0'}
 	};
@@ -40,7 +38,7 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 	float temp = -1.0;
 	char *ai_model = NULL;
 
-	while ((choice = getopt_long(argc, argv, "s:u:j:t:m:h", long_options, NULL)) != -1) {
+	while ((choice = getopt_long(argc, argv, "s:u:j:t:m:hr", long_options, NULL)) != -1) {
 
 		switch (choice) {
 			case 's':
@@ -104,6 +102,9 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 				args_detect[help] = help;
 				printf(help_text, argv[0]);
 				break;
+			case 'r':
+				args_detect[repl] = repl;
+				break;
 			default:
 				errno = EINVAL;
 				perror("Please provide a valid argument");
@@ -121,8 +122,10 @@ void parse_options(const int argc, char **restrict argv, struct main_state *rest
 	if (ms->user_prompt != NULL) {
 		add_text_prompt(ms->root, "user", ms->user_prompt);
 	} else {
-		if (args_detect[help] == help) { errno = 134; } else { errno = EINVAL; }
+		errno = EINVAL;
 	}
+
+	return args_detect;
 }
 
 void *alloc_main_state(void)
