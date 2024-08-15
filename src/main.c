@@ -123,7 +123,7 @@ do {
 	json_object_put(result_json);
 	result_json = NULL;
 
-} while (args_detect[repl] == repl);
+} while (args_detect != NULL && args_detect[repl] == repl);
 
 cleanup:
 
