@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	ms->api_key = getenv("OPENAI_API_KEY");
 
 	if (ms->api_key == NULL) {
-		errno = ENOKEY;
+		errno = 1;
 		perror("No API key found. Please get an API key from OpenAI and set the environment variable OPENAI_API_KEY");
 		goto cleanup;
 	}
@@ -98,7 +98,7 @@ do {
 	json_object *result_json = json_tokener_parse(result_string);
 
 	if (json_object_object_get(result_json, "error") != NULL) {
-		errno = EBADR;
+		errno = 1;
 		fprintf(stderr, "%s\n", json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
 		free(result_string);
 		json_object_put(result_json);

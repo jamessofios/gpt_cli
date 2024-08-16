@@ -7,6 +7,11 @@ CC := gcc
 CFLAGS := -pedantic -std=c99
 CLIBS := -lcurl -ljson-c
 
+ifeq ($(shell uname),Darwin)
+	CFLAGS += -I/opt/homebrew/include
+	LDFLAGS += -L/opt/homebrew/lib
+endif
+
 # Source files location
 SRC_DIR := src
 # Object files location
@@ -41,7 +46,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 # Link object files and create binary
 $(TARGET): $(OBJ)
 	@mkdir -p $(dir $(TARGET))
-	$(CC) $(OBJ) -o $(TARGET) $(CLIBS) $(CFLAGS) $(STRIP)
+	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS) $(CLIBS) $(CFLAGS) $(STRIP)
 # Clean object files and binary
 clean:
 	$(RM) -r $(OBJ_DIR) $(TARGET)
