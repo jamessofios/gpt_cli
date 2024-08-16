@@ -27,7 +27,7 @@ And of course _gpt_cli_ requires use of OpenAI's ChatGPT API to function
 ## Installation
 
 - First install the dependencies using the appropriate package manager for your system
-- The dependencies are `libcurl` and `libjson-c`. In Debian and Ubuntu run `sudo apt install libcurl4 libcurl4-gnutls-dev` and `sudo apt install libjson-c5 libjson-c-dev` to install the required dependencies
+- The dependencies are `libcurl` and `libjson-c`. In Debian and Ubuntu run `sudo apt install libcurl4 libcurl4-gnutls-dev` and `sudo apt install libjson-c5 libjson-c-dev` to install the required dependencies. In MacOS, you will need to install `brew` and run `brew install json-c`.
 - Next use the `make` command in this git repository folder to build the application
 
 ## How to use
