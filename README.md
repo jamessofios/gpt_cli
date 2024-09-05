@@ -35,6 +35,14 @@ Send a basic prompt to ChatGPT with default settings where you are not saving th
 ```sh
 gpt -u 'This is my first prompt'
 ```
+To enter interactive mode, ise the `-r` or `--repl` option
+```sh
+gpt -r
+> Hello!
+Hello, how can I assist you today?
+>
+```
+
 Send a prompt to ChatGPT with default settings where you are saving the chat history
 ```sh
 gpt -u 'This is my first prompt where I am saving the chat history' -j 'my_chat.json'
@@ -43,6 +51,19 @@ Send a prompt to ChatGPT where you change the model to gpt-4 and set the tempera
 ```sh
 gpt -u 'Hello!' -s 'You are a dog' -m 'gpt-4' -t '0'
 ```
+
+You can also pipe into this command, use input redirection, and output redirection:
+```sh
+echo 'Hello!' | gpt
+# Sends the output text of the echo command to the LLM
+
+gpt < prompt.txt
+# Sends the prompt from the text file to the LLM
+
+gpt -u 'Hello!' > response.txt
+# Outputs the response text to a file
+```
+
 The command's options are listed below:
 ```sh
 gpt [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file] [-h --help] [-r --repl]
