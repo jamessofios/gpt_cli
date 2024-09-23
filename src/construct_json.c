@@ -1,4 +1,8 @@
 #include "construct_json.h"
+/* Per OpenAI:
+ * As of July 2024, gpt-4o-mini should be used in place of gpt-3.5-turbo, as it is cheaper, more capable, multimodal, and just as fast. gpt-3.5-turbo is still available for use in the API.
+ */
+static const char *restrict default_model = "gpt-4o-mini";
 
 void add_text_prompt(json_object *input, const char *role, const char *prompt_text)
 {
@@ -30,8 +34,7 @@ json_object *new_chatgpt(void)
 {
 	json_object *main_obj = json_object_new_object();
 
-	json_object_object_add(main_obj, "model", json_object_new_string("gpt-3.5-turbo"));
-//	json_object_object_add(main_obj, "temperature", json_object_new_int(1));
+	json_object_object_add(main_obj, "model", json_object_new_string(default_model));
 	json_object_object_add(main_obj, "messages", json_object_new_array());
 
 	return main_obj;
