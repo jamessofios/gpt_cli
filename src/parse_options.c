@@ -1,24 +1,13 @@
 #include "parse_options.h"
 
+#define COUNT_OF(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
+
 enum argument_detection *parse_options(const int argc, char **restrict argv, struct main_state *restrict ms) {
 
 	if (argc == 1) {
 		errno = EINVAL;
 		return NULL;
 	}
-
-	enum argument_detection *args_detect = malloc(7 * sizeof(*args_detect));
-
-	if (args_detect == NULL) { return NULL; }
-
-
-	memset(args_detect, (signed int)-1, 7);
-
-	/*
-	*args_detect = { [user_prompt] = arg_not_found, [system_prompt] = arg_not_found,
-					  [json_file] = arg_not_found, [temperature] = arg_not_found,
-					  [model] = arg_not_found, [help] = arg_not_found, [repl] = arg_not_found };
-	*/
 
 	static struct option long_options[] = {
 		{"user_prompt", required_argument, NULL, 'u'},
@@ -31,6 +20,12 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 		//the last entry in the array must be all zeros for getopt_long to know where the array ends
 		{NULL, 0, NULL, '\0'}
 	};
+
+	enum argument_detection *args_detect = malloc(COUNT_OF(long_options) * sizeof(*args_detect));
+
+	if (args_detect == NULL) { return NULL; }
+
+	memset(args_detect, (signed int)-1, COUNT_OF(long_options));
 
 	// Specifing signed char because clang on termux defaults to unsigned char
 	signed char choice = '\0';
