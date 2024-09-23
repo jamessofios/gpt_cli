@@ -10,13 +10,15 @@ struct main_state {
 	json_object *root;
 };
 
+struct chat_message {
+	char *role;
+	char *message;
+};
+
 struct main_program_state {
-	const char *restrict openai_api_key;
-	const char *restrict anthropic_api_key;
-
-	char *model;
+	const char *restrict api_key;
+	char *restrict model;
+	struct chat_message *chat_messages;
 	float temperature;
-	char **messages;
 	bool stream;
-
 };
