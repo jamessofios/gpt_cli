@@ -22,11 +22,9 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 		{NULL, 0, NULL, '\0'}
 	};
 
-	enum argument_detection *args_detect = malloc(COUNT_OF(long_options) * sizeof(*args_detect));
+	enum argument_detection *args_detect = calloc(COUNT_OF(long_options), sizeof(*args_detect));
 
 	if (args_detect == NULL) { return NULL; }
-
-	memset(args_detect, (signed int)-1, COUNT_OF(long_options));
 
 	// Specifing signed char because clang on termux defaults to unsigned char
 	signed char choice = '\0';
@@ -114,7 +112,7 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 	if (ms->root == NULL) { ms->root = new_chatgpt(); }
 	if (ai_model != NULL) { set_model(ms->root, ai_model); free(ai_model); ai_model = NULL; }
 
-	if (args_detect[stream] == stream) { set_stream(ms->root, 1); }
+	if (args_detect != NULL && args_detect[stream] == stream) { set_stream(ms->root, 1); }
 
 	// check if temp is valid. Otherwise it will default to 1
 	if (temp >= 0.0 && temp <= 2.0 ) { set_temp(ms->root, temp); }

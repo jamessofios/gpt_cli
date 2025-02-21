@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 
 do {
 
-	if(isatty(STDIN_FILENO) && args_detect[repl] != repl) {
+	if(isatty(STDIN_FILENO) && args_detect != NULL && args_detect[repl] != repl) {
 
 		if (errno == EINVAL) {
 			goto cleanup;
@@ -95,33 +95,41 @@ do {
 		goto cleanup;
 	}
 
-	json_object *result_json = json_tokener_parse(result_string);
+	if (args_detect[stream] != stream) {
 
-	if (json_object_object_get(result_json, "error") != NULL) {
-		errno = 1;
-		fprintf(stderr, "%s\n", json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
+		json_object *result_json = json_tokener_parse(result_string);
+
+		if (json_object_object_get(result_json, "error") != NULL) {
+			errno = 1;
+			fprintf(stderr, "%s\n", json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
+			free(result_string);
+			json_object_put(result_json);
+			goto cleanup;
+		}
+
+		json_object *assist_message = json_object_object_get(json_object_array_get_idx(json_object_object_get(result_json, "choices"), 0), "message");
+
+		json_object *text = json_object_object_get(assist_message, "content");
+
+		add_text_prompt(ms->root, "assistant", json_object_get_string(text));
+
+		if (ms->json_file != NULL) {
+			json_object_to_file(ms->json_file, ms->root);
+		}
+
+		puts(json_object_get_string(json_object_object_get(assist_message, "content")));
+
 		free(result_string);
+		result_string = NULL;
+
 		json_object_put(result_json);
-		goto cleanup;
+		result_json = NULL;
+
+	} else if (args_detect[stream] == stream) {
+
+
+
 	}
-
-	json_object *assist_message = json_object_object_get(json_object_array_get_idx(json_object_object_get(result_json, "choices"), 0), "message");
-
-	json_object *text = json_object_object_get(assist_message, "content");
-
-	add_text_prompt(ms->root, "assistant", json_object_get_string(text));
-
-	if (ms->json_file != NULL) {
-		json_object_to_file(ms->json_file, ms->root);
-	}
-
-	puts(json_object_get_string(json_object_object_get(assist_message, "content")));
-
-	free(result_string);
-	result_string = NULL;
-
-	json_object_put(result_json);
-	result_json = NULL;
 
 } while (args_detect != NULL && args_detect[repl] == repl);
 
