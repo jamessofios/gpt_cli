@@ -17,6 +17,7 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 		{"model", required_argument, NULL, 'm'},
 		{"help", no_argument, NULL, 'h'},
 		{"repl", no_argument, NULL, 'r'},
+		{"stream", no_argument, NULL, 'e'},
 		//the last entry in the array must be all zeros for getopt_long to know where the array ends
 		{NULL, 0, NULL, '\0'}
 	};
@@ -33,7 +34,7 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 	float temp = -1.0;
 	char *ai_model = NULL;
 
-	while ((choice = getopt_long(argc, argv, "s:u:j:t:m:hr", long_options, NULL)) != -1) {
+	while ((choice = getopt_long(argc, argv, "s:u:j:t:m:hre", long_options, NULL)) != -1) {
 
 		switch (choice) {
 			case 's':
@@ -100,6 +101,9 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 			case 'r':
 				args_detect[repl] = repl;
 				break;
+			case 'e':
+				args_detect[stream] = stream;
+				break;
 			default:
 				errno = EINVAL;
 				perror("Please provide a valid argument");
@@ -109,6 +113,8 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 
 	if (ms->root == NULL) { ms->root = new_chatgpt(); }
 	if (ai_model != NULL) { set_model(ms->root, ai_model); free(ai_model); ai_model = NULL; }
+
+	if (args_detect[stream] == stream) { set_stream(ms->root, 1); }
 
 	// check if temp is valid. Otherwise it will default to 1
 	if (temp >= 0.0 && temp <= 2.0 ) { set_temp(ms->root, temp); }

@@ -12,7 +12,7 @@ void free_main_state(struct main_state *restrict ms);
 
 
 
-static const char *help_text = "Usage: %s [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file] [-h --help] [-r --repl]\n";
+static const char *help_text = "Usage: %s [-m --model] [-t --temperature] [-s --system_prompt] [-u --user_prompt] [-j --json_file] [-h --help] [-r --repl] [-e --stream]\n";
 
 enum argument_detection {
 	arg_not_found = -1,
@@ -22,7 +22,8 @@ enum argument_detection {
 	temperature = 3,
 	model = 4,
 	help = 5,
-	repl = 6
+	repl = 6,
+	stream = 8
 };
 
 // Check the value of errno after calling this function. The value should be zero unless an error occurs.

@@ -30,6 +30,12 @@ void set_model(json_object *input, char* model)
 	json_object_object_add(input, "model", json_object_new_string(model));
 }
 
+void set_stream(json_object *input, int option)
+{
+	//A non-zero value can be considered as boolean true
+	json_object_object_add(input, "stream", json_object_new_boolean(option));
+}
+
 json_object *new_chatgpt(void)
 {
 	json_object *main_obj = json_object_new_object();
