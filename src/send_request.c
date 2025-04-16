@@ -1,6 +1,6 @@
 #include "send_request.h"
 
-char* send_request(const char *restrict url, const char *restrict api_key, const char *restrict json_str)
+char* send_request(const char *restrict url, const char *restrict api_key, const char *restrict json_str, enum argument_detection *args_detect)
 {
 	char *result_string = NULL;
 
@@ -24,8 +24,22 @@ char* send_request(const char *restrict url, const char *restrict api_key, const
 	free(auth);
 	auth = NULL;
 
+
 	hnd = curl_easy_init();
-	curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, write_callback);
+
+
+	// decide which write_callback() function to use based on if the response will be sreamed or not
+	size_t (*write_callback_ptr)(void *data, size_t size, size_t nmemb, void *userp);
+
+	if (args_detect != NULL && args_detect[stream] == stream) {
+		// if stream, then fn = write_callback_stream
+		write_callback_ptr = write_callback_stream;
+	} else {
+		// else use normal write_callback
+		write_callback_ptr = write_callback;
+	}
+
+	curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, write_callback_ptr);
 	curl_easy_setopt(hnd, CURLOPT_WRITEDATA, (void *)&chunk);
 	curl_easy_setopt(hnd, CURLOPT_BUFFERSIZE, 102400L);
 	curl_easy_setopt(hnd, CURLOPT_URL, url);
@@ -54,12 +68,11 @@ cleanup:
 	chunk.response = NULL;
 	chunk.size = 0;
 
-	curl_easy_cleanup(hnd);
-	hnd = NULL;
-
 	curl_slist_free_all(slist1);
 	slist1 = NULL;
 
+	curl_easy_cleanup(hnd);
+	hnd = NULL;
 	curl_global_cleanup();
 
 	return result_string;
@@ -80,6 +93,87 @@ size_t write_callback(void *data, size_t size, size_t nmemb, void *userp)
 	mem->response = ptr;
 	memcpy(&(mem->response[mem->size]), data, realsize);
 	mem->size += realsize;
-	mem->response[mem->size] = 0;
+	mem->response[mem->size] = '\0';
+
+	return realsize;
+}
+
+size_t write_callback_stream(void *data, size_t size, size_t nmemb, void *userp)
+{
+	size_t realsize = size * nmemb;
+
+	if (userp == NULL) { return realsize;}
+
+//	char *str_data = data;
+//	char *jsonl = NULL;
+//
+//	for (size_t i = 0; i < realsize; i++) {
+//		if (str_data[i] == '\n') {
+//			jsonl = calloc(1, realsize);
+//			memcpy(jsonl, str_data, i - 1);
+//		} else if (str_data[i] == '\0') {
+//			break;
+//		}
+//	}
+
+	struct memory *mem = (struct memory *)userp;
+	char *ptr = realloc(mem->response, mem->size + realsize + 1);
+
+	if(ptr == NULL) {
+		return 0;
+	}
+
+	mem->response = ptr;
+	memcpy(&(mem->response[mem->size]), data, realsize);
+	mem->size += realsize;
+	mem->response[mem->size] = '\0';
+
+
+	// Hook here to print the jsonl immedietly
+
+	jsonl_data json_lines;
+
+	(void) init_jsonl_data(&json_lines);
+
+	(void) process_jsonl_data((char*)data, &json_lines);
+
+//	json_object *root = sanitize_and_parse_jsonl(jsonl);
+
+//	if (root == NULL) { goto cleanup; }
+
+//	for (size_t i = 0; i < jd->count; i++) {
+	for (size_t i = 0; i < json_lines.count; i++) {
+		json_object *choices = json_object_object_get(json_lines.objects[i], "choices");
+		if (json_object_get_type(choices) != json_type_array) { goto cleanup; }
+
+		json_object *first_choice = json_object_array_get_idx(choices, 0);
+		if (json_object_get_type(first_choice) != json_type_object) { goto cleanup; }
+
+		json_object *finish_reason = json_object_object_get(first_choice, "finish_reason");
+		if (json_object_get_type(finish_reason) == json_type_string && !strcmp(json_object_get_string(finish_reason),"stop") ) { goto cleanup; }
+
+		json_object *delta = json_object_object_get(first_choice, "delta");
+		if (json_object_get_type(delta) != json_type_object) { goto cleanup; }
+
+		json_object *content = json_object_object_get(delta, "content");
+		if (json_object_get_type(content) != json_type_string) { goto cleanup; }
+
+		const char *val = json_object_get_string(content);
+
+		if (val != NULL) {
+			if (!is_terminal(stdout)) {
+				printf("%s", val);
+			} else {
+				printf("%s%s%s", "\033[1;35m", val, "\033[0m");
+			}
+		} else {
+			goto cleanup;
+		}
+	}
+
+cleanup:
+//	if (jsonl != NULL) { free(jsonl); }
+	free_jsonl_data(&json_lines);
+//	json_object_put(root);
 	return realsize;
 }
