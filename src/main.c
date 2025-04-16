@@ -1,21 +1,14 @@
-// https://curl.se/libcurl/c/curl_easy_setopt.html
-// https://help.openai.com/en/articles/7042661-chatgpt-api-transition-guide
-// https://ai.stackexchange.com/questions/39837/meaning-of-roles-in-the-api-of-gpt-4-chatgpt-system-user-assistant
-// https://stackoverflow.com/questions/3840582/still-reachable-leak-detected-by-valgrind
-
-#include "main.h"
-#include "construct_json.h"
-#include "send_request.h"
-#include "parse_options.h"
-#include <json-c/json.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-// https://www.thegeekstuff.com/2010/10/linux-error-codes/
 #include <errno.h>
-#include <assert.h>
+#include <json-c/json.h>
+#include "global.h"
+#include "construct_json.h"
+#include "parse_jsonl.h"
+#include "send_request.h"
+#include "parse_options.h"
 
 int main(int argc, char **argv)
 {
@@ -39,17 +32,20 @@ int main(int argc, char **argv)
 
 	args_detect = parse_options(argc, argv, ms);
 
-	if (args_detect == NULL && isatty(STDIN_FILENO)) { goto cleanup; }
+	if (args_detect == NULL && is_terminal(stdin)) { goto cleanup; }
+
+//	if (args_detect[repl] == repl && args_detect[user_prompt] == user_prompt) { args_detect[repl] = arg_not_found; }
+
 
 do {
 
-	if(isatty(STDIN_FILENO) && args_detect != NULL && args_detect[repl] != repl) {
+	if(is_terminal(stdin) && args_detect != NULL && args_detect[repl] != repl) {
 
 		if (errno == EINVAL) {
 			goto cleanup;
 		}
 
-	} else if (!isatty(STDIN_FILENO) || args_detect[repl] == repl) {
+	} else if (!is_terminal(stdin) || (args_detect != NULL && args_detect[repl] == repl)) {
 
 		if (ms->root == NULL) {
 			ms->root = new_chatgpt();
@@ -59,7 +55,9 @@ do {
 		char *s = NULL;
 
 
-		if (args_detect != NULL && args_detect[repl] == repl) { printf("> "); }
+		if (args_detect != NULL && args_detect[repl] == repl) {
+			printf("\033[1;36m%s>\033[0m ", json_object_get_string(json_object_object_get(ms->root, "model")));
+		}
 
 
 		for (int i = 1;; i++) {
@@ -87,7 +85,7 @@ do {
 
 	char *result_string = send_request("https://api.openai.com/v1/chat/completions",
 					ms->api_key,
-					json_object_to_json_string(ms->root));
+					json_object_to_json_string(ms->root), args_detect);
 
 	if (result_string == NULL) {
 		errno = ENETUNREACH;
@@ -95,7 +93,28 @@ do {
 		goto cleanup;
 	}
 
-	if (args_detect[stream] != stream) {
+	if (args_detect != NULL && args_detect[stream] == stream) {
+		if (result_string != NULL) { free(result_string); }
+		puts("");
+		errno = 0;
+
+//		jsonl_data jd;
+//		init_jsonl_data(&jd);
+//		int count = process_jsonl_data(result_string, &jd);
+//
+//		for (size_t i = 0; i < jd.count; i++) {
+//			json_object *as = json_object_object_get(json_object_array_get_idx(json_object_object_get(jd.objects[i], "choices"), 0), "delta");
+//
+//
+//			const char *val = json_object_get_string(json_object_object_get(as, "content"));
+//
+//			if (val != NULL) {
+//				printf("%s", val);
+//			}
+//		}
+//		printf("\n");
+//		free_jsonl_data(&jd);
+	} else {
 
 		json_object *result_json = json_tokener_parse(result_string);
 
@@ -124,9 +143,6 @@ do {
 
 		json_object_put(result_json);
 		result_json = NULL;
-
-	} else if (args_detect[stream] == stream) {
-
 
 
 	}
