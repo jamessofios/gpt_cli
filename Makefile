@@ -25,11 +25,14 @@ OBJ := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC))
 # Binary name
 TARGET := gpt
 
-.PHONY: all clean debug release
+.PHONY: all clean debug release asan
 
 # Default Target
 .DEFAULT_GOAL := release
 all: $(TARGET)
+
+asan: CFLAGS += -fsanitize=address
+asan: debug
 
 debug: CFLAGS += -O0 -g
 debug: all
