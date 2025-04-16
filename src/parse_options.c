@@ -1,7 +1,5 @@
 #include "parse_options.h"
 
-#define COUNT_OF(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
-
 enum argument_detection *parse_options(const int argc, char **restrict argv, struct main_state *restrict ms) {
 
 	if (argc == 1) {
@@ -36,6 +34,8 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 
 		switch (choice) {
 			case 's':
+				if (args_detect[system_prompt] == system_prompt) { break; }
+
 				args_detect[system_prompt] = system_prompt;
 
 				ms->system_prompt = calloc(1, strlen(optarg) + 1);
@@ -48,6 +48,8 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 				break;
 
 			case 'u':
+				if (args_detect[user_prompt] == user_prompt) { break; }
+
 				args_detect[user_prompt] = user_prompt;
 
 				ms->user_prompt = calloc(1, strlen(optarg) + 1);
@@ -59,6 +61,7 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 				break;
 
 			case 'j':
+				if (args_detect[json_file] == json_file) { break; }
 
 				args_detect[json_file] = json_file;
 
@@ -77,11 +80,15 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 
 				break;
 			case 't':
+				if (args_detect[temperature] == temperature) { break; }
+
 				args_detect[temperature] = temperature;
 
 				temp = atof(optarg);
 				break;
 			case 'm':
+				if (args_detect[model] == model) { break; }
+
 				args_detect[model] = model;
 
 				ai_model = calloc(1, strlen(optarg) + 1);
@@ -93,13 +100,19 @@ enum argument_detection *parse_options(const int argc, char **restrict argv, str
 
 				break;
 			case 'h':
+				if (args_detect[help] == help) { break; }
+
 				args_detect[help] = help;
 				printf(help_text, argv[0]);
 				break;
 			case 'r':
+				if (args_detect[repl] == repl) { break; }
+
 				args_detect[repl] = repl;
 				break;
 			case 'e':
+				if (args_detect[stream] == stream) { break; }
+
 				args_detect[stream] = stream;
 				break;
 			default:

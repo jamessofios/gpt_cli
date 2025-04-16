@@ -1,5 +1,5 @@
 #pragma once
-#include "main.h"
+#include "global.h"
 #include "construct_json.h"
 #include <stdio.h>
 #include <stdlib.h>
