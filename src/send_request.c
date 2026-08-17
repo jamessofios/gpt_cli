@@ -1,5 +1,7 @@
 #include "send_request.h"
 
+static char* contatinated_stream_text = NULL;
+
 char* send_request(const char *restrict url, const char *restrict api_key, const char *restrict json_str, enum argument_detection *args_detect)
 {
 	char *result_string = NULL;
@@ -59,11 +61,12 @@ char* send_request(const char *restrict url, const char *restrict api_key, const
 	if (ret != CURLE_OK || chunk.size <= 0 || chunk.response == NULL) {
 		goto cleanup;
 	}
-
-	result_string = calloc(chunk.size + 1, 1);
-	memcpy(result_string, chunk.response, chunk.size);
-
+	if (args_detect != NULL && args_detect[stream] != stream) {
+		result_string = calloc(chunk.size + 1, 1);
+		memcpy(result_string, chunk.response, chunk.size);
+	}
 cleanup:
+
 	free(chunk.response);
 	chunk.response = NULL;
 	chunk.size = 0;
@@ -75,7 +78,19 @@ cleanup:
 	hnd = NULL;
 	curl_global_cleanup();
 
-	return result_string;
+	if (contatinated_stream_text != NULL && args_detect != NULL && args_detect[stream] == stream) {
+		if (result_string != NULL) { free(result_string); result_string == NULL; }
+//		return contatinated_stream_text;
+		char *tmp = calloc(strlen(contatinated_stream_text) + 1, 1);
+		memcpy(tmp, contatinated_stream_text, strlen(contatinated_stream_text));
+		free(contatinated_stream_text);
+		contatinated_stream_text = NULL;
+		return tmp;
+	} else {
+		if (contatinated_stream_text != NULL) { free(contatinated_stream_text); contatinated_stream_text == NULL; }
+		return result_string;
+	}
+	return NULL;
 }
 
 /* https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html */
@@ -131,8 +146,7 @@ size_t write_callback_stream(void *data, size_t size, size_t nmemb, void *userp)
 
 	// Hook here to print the jsonl immedietly
 
-	jsonl_data json_lines;
-
+	jsonl_data json_lines = { .objects = NULL, .count = 0, .capacity = 0 };
 	(void) init_jsonl_data(&json_lines);
 
 	(void) process_jsonl_data((char*)data, &json_lines);
@@ -158,9 +172,29 @@ size_t write_callback_stream(void *data, size_t size, size_t nmemb, void *userp)
 		json_object *content = json_object_object_get(delta, "content");
 		if (json_object_get_type(content) != json_type_string) { goto cleanup; }
 
-		const char *val = json_object_get_string(content);
+		const char * const val = json_object_get_string(content);
+
 
 		if (val != NULL) {
+			/* HERE */
+			if (contatinated_stream_text == NULL) {
+				contatinated_stream_text = calloc(strlen(val) + 1, 1);
+				memcpy(contatinated_stream_text, val, strlen(val));
+			} else {
+				char *tmp = calloc(strlen(contatinated_stream_text) + strlen(val) + 1, 1);
+				memcpy(tmp, contatinated_stream_text, strlen(contatinated_stream_text));
+				memcpy(tmp + strlen(contatinated_stream_text), val, strlen(val));
+				free(contatinated_stream_text);
+				contatinated_stream_text = tmp;
+				tmp = NULL;
+			}
+//		printf("%s\n", contatinated_stream_text);
+//			add_text_prompt(ms->root, "assistant", val);
+//			if (ms->json_file != NULL) {
+//				json_object_to_file(ms->json_file, ms->root);
+//			}
+			/* Here */
+
 			if (!is_terminal(stdout)) {
 				printf("%s", val);
 			} else {
@@ -173,6 +207,7 @@ size_t write_callback_stream(void *data, size_t size, size_t nmemb, void *userp)
 
 cleanup:
 //	if (jsonl != NULL) { free(jsonl); }
+
 	free_jsonl_data(&json_lines);
 //	json_object_put(root);
 	return realsize;

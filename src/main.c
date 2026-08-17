@@ -83,7 +83,11 @@ do {
 		}
 	}
 
-	char *result_string = send_request("https://api.openai.com/v1/chat/completions",
+//	char *result_string = send_request("https://api.openai.com/v1/chat/completions",
+//					ms->api_key,
+//					json_object_to_json_string(ms->root), args_detect);
+
+	char *result_string = send_request("http://192.168.1.3:11434/v1/chat/completions",
 					ms->api_key,
 					json_object_to_json_string(ms->root), args_detect);
 
@@ -94,10 +98,19 @@ do {
 	}
 
 	if (args_detect != NULL && args_detect[stream] == stream) {
-		if (result_string != NULL) { free(result_string); }
+		add_text_prompt(ms->root, "assistant", result_string);
+		if (ms != NULL && ms->json_file != NULL) {
+			json_object_to_file(ms->json_file, ms->root);
+		}
+		//HERE
+		// Need to free the result_string here if the write_callback_stream function does not get called again in repl mode
+		// because it will get freed in that function, as we use it again there
+//		if (args_detect != NULL && args_detect[repl] != repl) {
+			free(result_string);
+			result_string = NULL;
+//		}
 		puts("");
 		errno = 0;
-
 //		jsonl_data jd;
 //		init_jsonl_data(&jd);
 //		int count = process_jsonl_data(result_string, &jd);
@@ -120,7 +133,9 @@ do {
 
 		if (json_object_object_get(result_json, "error") != NULL) {
 			errno = 1;
-			fprintf(stderr, "%s\n", json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
+			fprintf(stderr, "Error: %s\n", json_object_get_string(json_object_object_get(json_object_object_get(result_json, "error"), "message")));
+
+//			fprintf(stderr, "%s\n", json_object_to_json_string_ext(result_json, JSON_C_TO_STRING_PRETTY));
 			free(result_string);
 			json_object_put(result_json);
 			goto cleanup;
@@ -153,6 +168,5 @@ cleanup:
 
 	free(args_detect);
 	free_main_state(ms);
-
 	return errno;
 }

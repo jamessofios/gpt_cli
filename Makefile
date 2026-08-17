@@ -34,6 +34,12 @@ all: $(TARGET)
 asan: CFLAGS += -fsanitize=address
 asan: debug
 
+leak: CFLAGS += -fsanitize=leak
+leak: debug
+
+undefined: CFLAGS += -fsanitize=undefined
+undefined: debug
+
 debug: CFLAGS += -O0 -g
 debug: all
 

@@ -9,10 +9,14 @@ void init_jsonl_data(jsonl_data *data) {
 
 // Free the JSONL data structure
 void free_jsonl_data(jsonl_data *data) {
+   if (data == NULL) { return; }
+
     for (size_t i = 0; i < data->count; i++) {
         json_object_put(data->objects[i]);
         data->objects[i] = NULL;
     }
+
+    cleanup:
     free(data->objects);
     data->objects = NULL;
 }
@@ -28,16 +32,17 @@ static int process_json_line(const char *line, jsonl_data *data) {
 	if (line[0] == 'd' || line[0] == 'D') {
 		substring = line + strlen("data: ");
 		if (substring[0] == '[') { return 0; }
-		jsonl_string = calloc(1, strlen(substring) + 1);
+		jsonl_string = calloc(strlen(substring) + 1, 1);
 		memcpy(jsonl_string, substring, strlen(substring));
 	} else if (line[0] == 'e' || line[0] == 'E') {
-		substring = line + strlen("event: ");
-		if (substring[0] == '[') { return 0; }
-		jsonl_string = calloc(1, strlen(substring) + 1);
-		memcpy(jsonl_string, substring, strlen(substring));
+//		substring = line + strlen("event: ");
+//		if (substring[0] == '[') { return 0; }
+//		jsonl_string = calloc(strlen(substring) + 1, 1);
+//		memcpy(jsonl_string, substring, strlen(substring));
 	} else {
-		jsonl_string = calloc(1, strlen(line) + 1);
-		strcpy(jsonl_string, line);
+		jsonl_string = calloc(strlen(line) + 1, 1);
+		memcpy(jsonl_string, line, strlen(line));
+//		strcpy(jsonl_string, line);
 	}
 
 	// Tokenizer fails if the last char is a newline \n
@@ -80,7 +85,7 @@ int process_jsonl_data(const char *jsonl_string, jsonl_data *data) {
             size_t len = end - start;
             if (len > 0) {
 //                char *line = strndup(start, len);
-                char *line = calloc(len + 1, 1);
+                char *line = calloc(1, len + 1);
                 if (line != NULL) {
                     memcpy(line, start, len);
                     process_json_line(line, data);
@@ -95,7 +100,7 @@ int process_jsonl_data(const char *jsonl_string, jsonl_data *data) {
         if (len > 0) {
 //            char *line = strndup(start, len);
 	    // process_json_line() will fail if the json line ends with \n
-            char *line = calloc(len + 1, 1);
+            char *line = calloc(1, len + 1);
             if (line != NULL) {
                 memcpy(line, start, len);
                 process_json_line(line, data);

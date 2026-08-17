@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdint.h>
 #include <curl/curl.h>
 #include <json-c/json.h>
 #include "parse_options.h"
