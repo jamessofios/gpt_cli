@@ -109,7 +109,7 @@ do {
 			free(result_string);
 			result_string = NULL;
 //		}
-		puts("");
+		putchar('\n');
 		errno = 0;
 //		jsonl_data jd;
 //		init_jsonl_data(&jd);

@@ -49,7 +49,7 @@ char* send_request(const char *restrict url, const char *restrict api_key, const
 	curl_easy_setopt(hnd, CURLOPT_POSTFIELDS, json_str);
 	curl_easy_setopt(hnd, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)strlen(json_str));
 	curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, slist1);
-	curl_easy_setopt(hnd, CURLOPT_USERAGENT, "curl/7.74.0");
+	curl_easy_setopt(hnd, CURLOPT_USERAGENT, "curl/8.14.1");
 	curl_easy_setopt(hnd, CURLOPT_MAXREDIRS, 50L);
 	curl_easy_setopt(hnd, CURLOPT_HTTP_VERSION, (long)CURL_HTTP_VERSION_2TLS);
 	curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "POST");
@@ -119,18 +119,6 @@ size_t write_callback_stream(void *data, size_t size, size_t nmemb, void *userp)
 
 	if (userp == NULL) { return realsize;}
 
-//	char *str_data = data;
-//	char *jsonl = NULL;
-//
-//	for (size_t i = 0; i < realsize; i++) {
-//		if (str_data[i] == '\n') {
-//			jsonl = calloc(1, realsize);
-//			memcpy(jsonl, str_data, i - 1);
-//		} else if (str_data[i] == '\0') {
-//			break;
-//		}
-//	}
-
 	struct memory *mem = (struct memory *)userp;
 	char *ptr = realloc(mem->response, mem->size + realsize + 1);
 
@@ -145,37 +133,9 @@ size_t write_callback_stream(void *data, size_t size, size_t nmemb, void *userp)
 
 
 	// Hook here to print the jsonl immedietly
+	char *val = do_json((char*)data);
 
-	jsonl_data json_lines = { .objects = NULL, .count = 0, .capacity = 0 };
-	(void) init_jsonl_data(&json_lines);
-
-	(void) process_jsonl_data((char*)data, &json_lines);
-
-//	json_object *root = sanitize_and_parse_jsonl(jsonl);
-
-//	if (root == NULL) { goto cleanup; }
-
-//	for (size_t i = 0; i < jd->count; i++) {
-	for (size_t i = 0; i < json_lines.count; i++) {
-		json_object *choices = json_object_object_get(json_lines.objects[i], "choices");
-		if (json_object_get_type(choices) != json_type_array) { goto cleanup; }
-
-		json_object *first_choice = json_object_array_get_idx(choices, 0);
-		if (json_object_get_type(first_choice) != json_type_object) { goto cleanup; }
-
-		json_object *finish_reason = json_object_object_get(first_choice, "finish_reason");
-		if (json_object_get_type(finish_reason) == json_type_string && !strcmp(json_object_get_string(finish_reason),"stop") ) { goto cleanup; }
-
-		json_object *delta = json_object_object_get(first_choice, "delta");
-		if (json_object_get_type(delta) != json_type_object) { goto cleanup; }
-
-		json_object *content = json_object_object_get(delta, "content");
-		if (json_object_get_type(content) != json_type_string) { goto cleanup; }
-
-		const char * const val = json_object_get_string(content);
-
-
-		if (val != NULL) {
+	if (val != NULL) {
 			/* HERE */
 			if (contatinated_stream_text == NULL) {
 				contatinated_stream_text = calloc(strlen(val) + 1, 1);
@@ -203,12 +163,10 @@ size_t write_callback_stream(void *data, size_t size, size_t nmemb, void *userp)
 		} else {
 			goto cleanup;
 		}
-	}
-
 cleanup:
 //	if (jsonl != NULL) { free(jsonl); }
 
-	free_jsonl_data(&json_lines);
+	free(val);
 //	json_object_put(root);
 	return realsize;
 }
