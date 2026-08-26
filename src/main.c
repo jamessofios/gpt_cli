@@ -16,11 +16,15 @@ int main(int argc, char **argv)
 	enum argument_detection *args_detect = NULL;
 
 
+	#ifdef DEBUG_ASSERTS
+	assert(ms != NULL);
+	#else
 	if (ms == NULL) {
 		errno = ENOMEM;
 		perror("Could not allocate state");
 		goto cleanup;
 	}
+	#endif
 
 	ms->api_key = getenv("OPENAI_API_KEY");
 

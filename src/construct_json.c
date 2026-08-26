@@ -2,8 +2,8 @@
 /* Per OpenAI:
  * As of July 2024, gpt-4o-mini should be used in place of gpt-3.5-turbo, as it is cheaper, more capable, multimodal, and just as fast. gpt-3.5-turbo is still available for use in the API.
  */
-static const char *restrict default_model = "gpt-4o-mini";
-
+//static const char *restrict default_model = "gpt-4o-mini";
+static const char *restrict default_model = "phi4-mini";
 void add_text_prompt(json_object *input, const char *role, const char *prompt_text)
 {
 	json_object *prompt_json = json_object_new_object();
