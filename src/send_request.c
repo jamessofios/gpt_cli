@@ -61,7 +61,8 @@ char* send_request(const char *restrict url, const char *restrict api_key, const
 	if (ret != CURLE_OK || chunk.size <= 0 || chunk.response == NULL) {
 		goto cleanup;
 	}
-	if (args_detect != NULL && args_detect[stream] != stream) {
+	// this if statement also covers the case of running the program with no arguments, which defaults to non-streaming mode
+	if ((args_detect != NULL && args_detect[stream] != stream) || args_detect == NULL) {
 		result_string = calloc(chunk.size + 1, 1);
 		memcpy(result_string, chunk.response, chunk.size);
 	}

@@ -78,7 +78,12 @@ do {
 		if (s != NULL) {
 			if (args_detect != NULL && args_detect[repl] == repl && !strcmp(s, "exit")) { free(s); goto cleanup; }
 			add_text_prompt(ms->root, "user", s);
-			free(s);
+			if (ms->user_prompt == NULL) {
+//				This would just cache the last user prompt in repl mode, but store the user prompt when unput is a pipe from stdin
+				ms->user_prompt = s;
+			} else {
+				free(s);
+			}
 		} else {
 //			errno = EINVAL;
 //			perror("You passed an empty string through stdin");
