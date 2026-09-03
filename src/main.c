@@ -12,7 +12,7 @@
 
 int main(int argc, char **argv)
 {
-	struct main_state *ms = alloc_main_state();
+	struct main_state *restrict ms = alloc_main_state();
 	enum argument_detection *args_detect = NULL;
 
 

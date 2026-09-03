@@ -15,5 +15,5 @@ void add_text_prompt(json_object *input, const char *role, const char *prompt_te
 void set_temp(json_object *input, float temp);
 void set_model(json_object *input, char* model);
 void set_stream(json_object *input, int option);
-json_object *new_chatgpt(void);
+json_object *new_chatgpt(void) __attribute_malloc__;
 //void add_json_prompt(json_object *dest, json_object *src);
